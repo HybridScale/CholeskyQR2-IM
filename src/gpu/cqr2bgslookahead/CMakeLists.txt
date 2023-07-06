@@ -10,7 +10,7 @@ target_link_libraries(cqr2bgslookahead MPI::MPI_CXX
 
 target_include_directories(cqr2bgslookahead PUBLIC ${CMAKE_SOURCE_DIR}/include 
                                                    ${CMAKE_SOURCE_DIR}/include/internals)
-target_compile_definitions(cqr2bgslookahead PRIVATE GPU)
+target_compile_definitions(cqr2bgslookahead PUBLIC GPU)
 
 if(USE_NCCL)
     add_library(cqr2bgslookaheadNCCL SHARED cqr2bgslookahead.cpp)
@@ -26,7 +26,7 @@ if(USE_NCCL)
 
     target_include_directories(cqr2bgslookaheadNCCL PUBLIC ${CMAKE_SOURCE_DIR}/include 
                                                     ${CMAKE_SOURCE_DIR}/include/internals)
-    target_compile_definitions(cqr2bgslookaheadNCCL PRIVATE GPU NCCL)
+    target_compile_definitions(cqr2bgslookaheadNCCL PUBLIC GPU NCCL)
 
 endif()
 

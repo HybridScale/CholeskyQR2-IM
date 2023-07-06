@@ -11,4 +11,4 @@ target_link_libraries(cqr2bgs MPI::MPI_CXX
 target_include_directories(cqr2bgs PUBLIC ${CMAKE_SOURCE_DIR}/include 
                                           ${CMAKE_SOURCE_DIR}/include/internals)
 
-target_compile_definitions(cqr2bgs PRIVATE GPU)
+target_compile_definitions(cqr2bgs PUBLIC GPU)
