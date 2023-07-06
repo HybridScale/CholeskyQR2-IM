@@ -10,6 +10,7 @@ target_link_libraries(cqr2bgslookahead MPI::MPI_CXX
 
 target_include_directories(cqr2bgslookahead PUBLIC ${CMAKE_SOURCE_DIR}/include 
                                                    ${CMAKE_SOURCE_DIR}/include/internals)
+target_compile_definitions(cqr2bgslookahead PRIVATE GPU)
 
 if(USE_NCCL)
     add_library(cqr2bgslookaheadNCCL SHARED cqr2bgslookahead.cpp)
@@ -22,9 +23,10 @@ if(USE_NCCL)
                                             validate
                                             distributedmatrix)
 
-    target_compile_definitions(cqr2bgslookaheadNCCL PRIVATE NCCL)
 
     target_include_directories(cqr2bgslookaheadNCCL PUBLIC ${CMAKE_SOURCE_DIR}/include 
                                                     ${CMAKE_SOURCE_DIR}/include/internals)
+    target_compile_definitions(cqr2bgslookaheadNCCL PRIVATE GPU NCCL)
+
 endif()
 
