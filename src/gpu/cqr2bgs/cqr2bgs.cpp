@@ -122,6 +122,7 @@ void cqr::qr2bgs::Start()
     
     timing->stop_timing("algorithm");
 
+    cudaDeviceSynchronize();
     std::vector<int> displacements = distmatrix->get_displacements();
     std::vector<int> counts = distmatrix->get_counts();
 
