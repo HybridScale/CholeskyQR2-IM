@@ -44,6 +44,7 @@ namespace cqr
         void cqr2bgs(std::vector<double> &A, std::vector<double> &R);
         void cqrbgs(std::vector<double> &A, std::vector<double> &R);
 #endif
+        void MPI_Warmup();
         void gramMatrix(double *A, double *R, double *tmp);
         void cholesky(double *B);
         void calculateQ(double *A, double *R);
@@ -85,6 +86,11 @@ namespace cqr
 #ifdef GPU
         cublasHandle_t cublashandle_;
         cusolverDnHandle_t cusolverhandle_;
+
+#ifdef NCCL
+            ncclUniqueId NCCLid_;
+            ncclComm_t nccl_comm_;
+#endif
 #endif
     };
 

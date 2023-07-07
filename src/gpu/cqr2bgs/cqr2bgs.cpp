@@ -1,4 +1,5 @@
 #include "cholesky_qr.hpp"
+#include "cqr2bgs.hpp"
 
 cqr::qr2bgs::qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size) : 
                  m_(m), n_(n), input_panel_size_(panel_size)
@@ -30,6 +31,14 @@ cqr::qr2bgs::qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size) :
 
     CUDA_CHECK(cudaSetDevice ( shmrank_ ));
 
+#ifdef NCCL
+    if (world_rank_ == 0) 
+        NCCLCHECK(ncclGetUniqueId(&NCCLid_));
+
+    MPI_Bcast(&NCCLid_, sizeof(NCCLid_), MPI_BYTE, 0, mpi_comm_);
+    NCCLCHECK(ncclCommInitRank(&nccl_comm_, world_size_, NCCLid_, world_rank_));
+#endif
+
     CUBLAS_CHECK(cublasCreate(&cublashandle_));
     CUSOLVER_CHECK(cusolverDnCreate(&cusolverhandle_));
 
@@ -41,7 +50,7 @@ cqr::qr2bgs::qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size) :
 
     cudatmp_.resize(input_panel_size_*input_panel_size_);
     cudatmp_.memset(0);
-    cudaWtmp_.resize(n_*n_);
+    cudaWtmp_.resize(m_*n_);
     cudaWtmp_.memset(0);
 
 }
@@ -51,6 +60,10 @@ cqr::qr2bgs::~qr2bgs()
 {
     cublasDestroy(cublashandle_);
     cusolverDnDestroy(cusolverhandle_);
+
+#ifdef NCCL
+        NCCLCHECK(ncclCommDestroy(nccl_comm_));
+#endif
 
     MPI_Finalize();
 }
@@ -100,6 +113,9 @@ void cqr::qr2bgs::Start()
 
     cudaAlocal_.copytodevice(Alocal_);
 
+    MPI_Warmup();
+    MPI_Barrier(MPI_COMM_WORLD);
+
     timing->start_timing("algorithm");
 
     cqr2bgs(cudaAlocal_, cudaR_);
@@ -128,7 +144,6 @@ void cqr::qr2bgs::Start()
         std::cout << "orthogonality: " << orthogonality_ << std::endl;
         std::cout << "residuals: "     << residuals_     << std::endl;
         timing->print();
-        std::cout << "timing: " << get_time() << std::endl;
     }
 
 }
@@ -201,7 +216,7 @@ void cqr::qr2bgs::cqrbgs(cudamemory<double> &A, cudamemory<double> &R)
 }
 
 
-void cqr::qr2bgs::gramMatrix(double *A, double *R, double *tmp)
+void cqr::qr2bgs::gramMatrix(double *A, double *R, double *tmp) 
 {
     // Calculating partial gram matrix to tmp device memory 
     // Sumation of all partial gramm matrix with mpi/nccl allreduce call
@@ -228,7 +243,7 @@ void cqr::qr2bgs::gramMatrix(double *A, double *R, double *tmp)
     #ifdef NCCL
         NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
     #else
-        MPI_Allreduce(MPI_IN_PLACE, cudatmp_.data(), panel_size_ * panel_size_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, tmp, panel_size_ * panel_size_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     timing->stop_timing("communication");
 
@@ -306,7 +321,7 @@ void cqr::qr2bgs::updateMatrix(int n, int ldw, double *A, double *R)
     
     timing->start_timing("communication");
     #ifdef NCCL
-        NCCLCHECK(ncclAllReduce(W, W, ldw*panel_size_, ncclDouble, ncclSum,  COMM, 0));
+        NCCLCHECK(ncclAllReduce(cudaWtmp_.data(), cudaWtmp_.data(), ldw*panel_size_, ncclDouble, ncclSum,  nccl_comm_, 0));
     #else
         MPI_Allreduce(MPI_IN_PLACE, cudaWtmp_.data(), ldw*panel_size_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
     #endif
@@ -338,7 +353,12 @@ void cqr::qr2bgs::updateMatrix(int n, int ldw, double *A, double *R)
 }
 
 
-float cqr::qr2bgs::get_time()
+void cqr::qr2bgs::MPI_Warmup()
 {
-    return time_of_execution_;
+#ifdef GPU
+    MPI_Allreduce(MPI_IN_PLACE, cudaWtmp_.data(), m_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
+#else
+    //MPI_Allreduce(MPI_IN_PLACE, cudaWtmp1_.data(), m_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
+#endif
+
 }
