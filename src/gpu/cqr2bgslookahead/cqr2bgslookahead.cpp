@@ -152,7 +152,9 @@ void cqr::qr2bgsloohahead::Start()
     std::vector<int> displacements = distmatrix->get_displacements();
     std::vector<int> counts = distmatrix->get_counts();
 
-    MPI_Gatherv(cudaAlocal_.data(), 
+    cudaAlocal_.copytohost(Alocal_);
+
+    MPI_Gatherv(Alocal_.data(), 
                 localm_, distmatrix->get_datatype(), 
                 A_.data(),
                 counts.data(),
