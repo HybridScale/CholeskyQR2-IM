@@ -46,8 +46,6 @@ template <typename T> void cudamemory<T>::memset(T value){
     CUDA_CHECK(cudaMemcpy ( cudaptr, tmp.data(), m_ * sizeof(T), cudaMemcpyHostToDevice));
 }
 
-template void cudamemory<int>::memset(int );
-template void cudamemory<double>::memset(double);
 
 
 template <typename T> void cudamemory<T>::copytohost(std::vector<T> &host){
