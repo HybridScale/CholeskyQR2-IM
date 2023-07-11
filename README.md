@@ -68,5 +68,23 @@ The next code block shows an example with simply explained options:
 ./executable --m <number of rows> --n <number of columns> --b <bgs panel size> --input <matrix>
 ```
 
+## Benchmarks
+
+Benchmarking can be done with [JUBE](https://apps.fz-juelich.de/jsc/jube/jube2/docu/introduction.html). `JUBE` xml scripts are prepared inside [benchmark](benchmarks) folder for Supek (`supek.xml`) and Vega (`vega.xml`) systems.
+
+Start benchmarks with command
+
+```bash
+jube run <system>.xml
+```
+
+Executed benchmarks are stored in the `benchmarks/<system>_test` folder, where `<system>` stands for `supek` or `vega`. To report a benchmark, run the following command, where `<id>` is the benchmark id or omit it to report the last benchmark:
+
+```bash
+jube result -a <system>_test -i <id>
+```
+
+
+
 ## Additional Documentation and Acknowledgments
 
