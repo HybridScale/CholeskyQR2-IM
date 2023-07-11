@@ -54,6 +54,7 @@ Thumbs.db
 
 # Ignore build dir
 build*/
+benchmarks/*test
 
 # Igonore vscode files
 .vscode*
