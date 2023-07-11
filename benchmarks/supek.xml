@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jube>
+
+  <benchmark name="cqr2" outpath="supek_test">
+    <comment>cqr2 supek test</comment>
+    
+    <parameterset name="configuration">
+      <parameter name="matrix_path">/lustre/group/UIP-2020-02-4559/cholesky_qrbgs</parameter>
+      <parameter name="build_path">/lustre/group/UIP-2020-02-4559/cholesky_qrbgs/build</parameter>
+    </parameterset>
+    
+    <!-- job configuration pararameter -->
+    <parameterset name="systemParameter" init_with="platform.xml">
+      <parameter name="queue">gpu</parameter>
+      <parameter name="args_exec">--m ${m} --n ${n} --b ${panel_size} --input=${inputmatrix}</parameter>
+      <parameter name="executable_versions">cqr2_gpu,cqr2_gpu_nccl,cqr2_gpu_lookahead,cqr2_gpu_lookahead_nccl</parameter> 
+      <parameter name="executable" separator=";">nsys profile -t cuda,nvtx,mpi --mpi-impl=mpich ${build_path}/${executable_versions}</parameter> 
+      <parameter name="timelimit">00:30:00</parameter>
+      
+      <parameter name="nodes" type="int">1</parameter>
+      <parameter name="taskspernode" type="int">4</parameter>
+      <parameter name="threadspertask" type="int">16</parameter>
+      <parameter name="gpu" type="int">4</parameter>
+      <parameter name="measurement">time -p</parameter>
+      <parameter name="env" separator=";">
+$jube_wp_envstr
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+echo "cuda visible devices $CUDA_VISIBLE_DEVICES"
+source ${matrix_path}/supek_activate_gnu.sh
+which nsys
+nsys profile --help
+      </parameter>
+      
+    </parameterset>
+    
+    <parameterset name="input_param">
+      <parameter name="m" typ="int">300000</parameter> 
+      <parameter name="n" typ="int">3000</parameter> 
+      <!--<parameter name="panel_size" typ="int">100,200,500,1000,2000,3000,5000,10000</parameter>-->
+      <parameter name="panel_size" typ="int">100,200</parameter>
+      <parameter name="matrixname">matrix_300000_10000_1.0e+15_1.bin</parameter>
+      <parameter name="inputmatrix">${matrix_path}/${matrixname}</parameter>
+    </parameterset>
+    
+    
+    <step name="execute" iterations="1">
+      <use>configuration</use>
+      <use>input_param</use>
+      <use>systemParameter</use>
+      <use from="platform.xml">executeset</use>
+      <use from="platform.xml">executesub</use>
+      <use from="platform.xml">jobfiles</use>
+      <do done_file="$done_file">$submit $submit_script</do>
+    </step>
+
+    <!-- 888888888888888888888888888888888888888888888888888888888888888888888888888 -->
+    
+    <!-- pattern definitions used to create the result table -->
+    <patternset name="pattern">
+      <pattern name="ortho" type="float" dotall="False" mode="pattern">orthogonality: $jube_pat_fp</pattern>
+      <pattern name="res" type="float" dotall="False" mode="pattern">residuals: $jube_pat_fp</pattern>
+      <pattern name="totaltime" type="float" dotall="False" mode="pattern">lgorithm: Value: $jube_pat_fp</pattern>
+      <pattern name="computation" type="float" dotall="False" mode="pattern">ommunication: Value: $jube_pat_fp</pattern>
+      <pattern name="communication" type="float" dotall="False" mode="pattern">computation: Value: $jube_pat_fp</pattern>
+    </patternset>
+    
+    <!-- use pattern to analyse previous steps -->
+    <analyser name="analyse"><!-- reduce="false"> -->
+      <use>pattern</use>
+      <analyse step="execute">
+        <file>job.out</file>
+      </analyse>
+    </analyser>
+
+    <!-- create result table -->
+    <result>
+      <use>analyse</use>
+      <table name="result" style="pretty" separator="," transpose="False" sort="tasks,executable_versions">
+        <column>executable_versions</column>
+        <column>tasks</column>
+        <column>jube_wp_id</column>
+        <column>ortho</column>
+        <column>res</column>
+        <column>panel_size</column>
+        <column>totaltime</column>
+        <column>computation</column>
+        <column>communication</column>
+      </table>
+    </result>
+    
+  </benchmark>
+</jube>
