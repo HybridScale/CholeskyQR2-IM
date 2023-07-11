@@ -1,6 +1,8 @@
-#include <mpi.h>
+#include <cstdint>
 #include <vector>
 #include <cmath>
+
+#include <mpi.h>
 
 #pragma once
 
