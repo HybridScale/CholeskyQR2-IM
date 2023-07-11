@@ -6,7 +6,7 @@
     
     <parameterset name="configuration">
       <parameter name="matrix_path">/lustre/group/UIP-2020-02-4559/cholesky_qrbgs</parameter>
-      <parameter name="build_path">/lustre/group/UIP-2020-02-4559/cholesky_qrbgs/build</parameter>
+      <parameter name="build_path">/lustre/group/UIP-2020-02-4559/cholesky_qrbgs/build-gnu</parameter>
     </parameterset>
     
     <!-- job configuration pararameter -->
@@ -14,7 +14,7 @@
       <parameter name="queue">gpu</parameter>
       <parameter name="args_exec">--m ${m} --n ${n} --b ${panel_size} --input=${inputmatrix}</parameter>
       <parameter name="executable_versions">cqr2_gpu,cqr2_gpu_nccl,cqr2_gpu_lookahead,cqr2_gpu_lookahead_nccl</parameter> 
-      <parameter name="executable" separator=";">nsys profile -t cuda,nvtx,mpi --mpi-impl=mpich ${build_path}/${executable_versions}</parameter> 
+      <parameter name="executable" separator=";">${build_path}/${executable_versions}</parameter> 
       <parameter name="timelimit">00:30:00</parameter>
       
       <parameter name="nodes" type="int">1</parameter>
@@ -27,8 +27,7 @@ $jube_wp_envstr
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 echo "cuda visible devices $CUDA_VISIBLE_DEVICES"
 source ${matrix_path}/supek_activate_gnu.sh
-which nsys
-nsys profile --help
+
       </parameter>
       
     </parameterset>
@@ -50,7 +49,7 @@ nsys profile --help
       <use from="platform.xml">executeset</use>
       <use from="platform.xml">executesub</use>
       <use from="platform.xml">jobfiles</use>
-      <do done_file="$done_file">$submit $submit_script</do>
+      <do done_file="$done_file">$submit -W umask=007 $submit_script</do>
     </step>
 
     <!-- 888888888888888888888888888888888888888888888888888888888888888888888888888 -->
