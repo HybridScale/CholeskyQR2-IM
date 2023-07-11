@@ -10,7 +10,7 @@
 double Validate::orthogonality()
 {
     unsigned int processor_count = std::thread::hardware_concurrency();
-    omp_set_num_threads(processor_count);
+    //omp_set_num_threads(processor_count);
     double norm = -14.0;
     double alpha = 1.0, beta = 0.0;
 
@@ -38,7 +38,7 @@ double Validate::orthogonality()
 double Validate::residuals()
 {
     unsigned int processor_count = std::thread::hardware_concurrency();
-    omp_set_num_threads(processor_count);
+    //omp_set_num_threads(processor_count);
 
     double norm = -14.0;
     double normA = -14.0;
