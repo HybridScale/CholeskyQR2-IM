@@ -7,6 +7,7 @@ This is a repository that implements the [Cholesky QR2](https://ieeexplore.ieee.
 ## Prerequisites
 
 Prerequsites are listed here:
+
 * cmake
 * boost program options
 * cuda
@@ -22,13 +23,19 @@ Prerequsites are listed here:
  cmake -B build && cmake --build build
 ```
 
+On Supek system
+```bash
+cmake -B build -DBLA_VENDOR=Intel10_64ilp -DCMAKE_CXX_COMPILER=CC
+```
 The following table provides CMake build options:
-|                            | CMake Option | Supported Values | Default Value |
+
+| Description                | CMake Option | Supported Values | Default Value |
 |----------------------------|--------------|------------------|---------------|
 | build gpu versions         | USE_GPU      | True, False      | True          |
 | use nccl for communication | USE_NCCL     | True, False      | True          |
 
 Upon successuful completition the following binaries will be available from the build directory:
+
 * cqr2_gpu_lookahead -> gpu version (MPI blocking collective routines) with lookahead method of updating rest of matrix
 * cqr2_gpu_lookahead_nccl -> gpu version (NCCL collective routines) with lookahead method of updating rest of matrix
 
@@ -41,3 +48,4 @@ Upon successuful completition the following binaries will be available from the 
 ### Branches
 
 ## Additional Documentation and Acknowledgments
+
