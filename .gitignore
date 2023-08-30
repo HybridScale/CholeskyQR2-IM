@@ -54,7 +54,17 @@ Thumbs.db
 
 # Ignore build dir
 build*/
+
+# Ignore bechmark and run dirs
 benchmarks/*test
+benchmarks/*dummy
+
+
+# Ignore binary files
+*.bin
 
 # Igonore vscode files
 .vscode*
+
+# Ignore output files
+*.csv

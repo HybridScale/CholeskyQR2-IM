@@ -58,9 +58,9 @@ $jube_wp_envstr
     <patternset name="pattern">
       <pattern name="ortho" type="float" dotall="False" mode="pattern">orthogonality: $jube_pat_fp</pattern>
       <pattern name="res" type="float" dotall="False" mode="pattern">residuals: $jube_pat_fp</pattern>
-      <pattern name="totaltime" type="float" dotall="False" mode="pattern">lgorithm: Value: $jube_pat_fp</pattern>
-      <pattern name="computation" type="float" dotall="False" mode="pattern">ommunication: Value: $jube_pat_fp</pattern>
-      <pattern name="communication" type="float" dotall="False" mode="pattern">computation: Value: $jube_pat_fp</pattern>
+      <pattern name="totaltime" type="float" dotall="False" mode="pattern">algorithm: Value: $jube_pat_fp</pattern>
+      <pattern name="computation" type="float" dotall="False" mode="pattern">computation: Value: $jube_pat_fp</pattern>
+      <pattern name="communication" type="float" dotall="False" mode="pattern">communication: Value: $jube_pat_fp</pattern>
     </patternset>
     
     <!-- use pattern to analyse previous steps -->
