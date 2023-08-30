@@ -359,9 +359,9 @@ void cqr::qr2bgs::updateMatrix(int n, int ldw, double *A, double *R)
 void cqr::qr2bgs::MPI_Warmup()
 {
 #ifdef GPU
-    MPI_Allreduce(MPI_IN_PLACE, cudaWtmp_.data(), localm_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
+    MPI_Allreduce(MPI_IN_PLACE, cudaWtmp_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
 #else
-    //MPI_Allreduce(MPI_IN_PLACE, cudaWtmp1_.data(), localm_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
+    //MPI_Allreduce(MPI_IN_PLACE, cudaWtmp1_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
 #endif
 
 }
