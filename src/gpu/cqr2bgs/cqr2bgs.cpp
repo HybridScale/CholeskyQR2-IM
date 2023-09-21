@@ -266,6 +266,62 @@ void cqr::qr2bgs::gramMatrix(double *A, double *R, double *tmp)
 
 }
 
+void cqr::qr2bgs::gramMatrixShifted(double *A, double *R, double *tmp) 
+{
+    // Calculating partial gram matrix to tmp device memory 
+    // (add AK) Shift added to partial gram matrix in one node
+    // Sumation of all partial gramm matrix with mpi/nccl allreduce call
+    // gemm operation to save to whole R matrix
+    double alpha = 1.0, beta = 0.0;
+    double shift = 1e-6; //(add AK) temporarily defining shift to be this value
+
+    int n = panel_size_, k = localm_;
+    int lda = n_ , ldtmp = panel_size_;
+    int ldi = n_, ldr = n_;
+    int incx = 1, incy = n_; //(add AK) parameters for Daxpy for shift
+    
+    timing->start_timing("computation");
+    //(annot AK) Constructing gram matrix from A and storing it in tmp. Whatever was originally is tmp is rewritten.
+    CUBLAS_CHECK(cublasDsyrk(cublashandle_,
+                             CUBLAS_FILL_MODE_LOWER,
+                             CUBLAS_OP_N,
+                             n, k,
+                             &alpha,
+                             A, lda,
+                             &beta,
+                             tmp, ldtmp));
+    if( world_rank_ == 0) //(add AK) adding the shift along the diagonal to the partial gram matrix in a single node
+    {   
+        std::vector<double> VECones(n,1);
+        CUBLAS_CHECK(cublasDaxpy(cublashandle_, n, &shift, VECones, 1, tmp, n))
+
+    }
+   timing->stop_timing("computation");
+
+
+    timing->start_timing("communication");
+    //(annot AK) Allreduce from all nodes to construct final gram matrix:
+    #ifdef NCCL
+        NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
+    #else
+        MPI_Allreduce(MPI_IN_PLACE, tmp, panel_size_ * panel_size_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    #endif
+    timing->stop_timing("communication");
+
+    timing->start_timing("computation");
+    //(annot AK) Copying the calculated gram matrix (stored in tmp) to R:
+    CUBLAS_CHECK(cublasDtrmm(cublashandle_,
+                             CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_LOWER,
+                             CUBLAS_OP_N, CUBLAS_DIAG_UNIT,
+                             n, n,
+                             &alpha,
+                             cudaI_.data(), ldi,
+                             tmp, ldtmp,
+                             R, ldr));
+    timing->stop_timing("computation");
+
+}
+
 
 void cqr::qr2bgs::cholesky(double *B)
 {

@@ -46,6 +46,7 @@ namespace cqr
 #endif
         void MPI_Warmup();
         void gramMatrix(double *A, double *R, double *tmp);
+        void gramMatrixShifted(double *A, double *R, double *tmp);      //(add AK) testing shifted gram matrix routine
         void cholesky(double *B);
         void calculateQ(double *A, double *R);
         void updateMatrix(int n, int ldw, double *A, double *R);
