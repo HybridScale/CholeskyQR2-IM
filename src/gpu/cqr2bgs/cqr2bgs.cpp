@@ -231,6 +231,7 @@ void cqr::qr2bgs::gramMatrix(double *A, double *R, double *tmp)
     int ldi = n_, ldr = n_;
     
     timing->start_timing("computation");
+    //(annot AK) Constructing gram matrix from A and storing it in tmp. Whatever was originally is tmp is rewritten.
     CUBLAS_CHECK(cublasDsyrk(cublashandle_,
                              CUBLAS_FILL_MODE_LOWER,
                              CUBLAS_OP_N,
@@ -243,6 +244,7 @@ void cqr::qr2bgs::gramMatrix(double *A, double *R, double *tmp)
 
 
     timing->start_timing("communication");
+    //(annot AK) Allreduce from all nodes to construct final gram matrix:
     #ifdef NCCL
         NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
     #else
@@ -251,6 +253,7 @@ void cqr::qr2bgs::gramMatrix(double *A, double *R, double *tmp)
     timing->stop_timing("communication");
 
     timing->start_timing("computation");
+    //(annot AK) Copying the calculated gram matrix (stored in tmp) to R:
     CUBLAS_CHECK(cublasDtrmm(cublashandle_,
                              CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_LOWER,
                              CUBLAS_OP_N, CUBLAS_DIAG_UNIT,
