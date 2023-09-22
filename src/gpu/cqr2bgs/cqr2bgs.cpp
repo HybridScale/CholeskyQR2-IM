@@ -293,7 +293,7 @@ void cqr::qr2bgs::gramMatrixShifted(double *A, double *R, double *tmp)
     if( world_rank_ == 0) //(add AK) adding the shift along the diagonal to the partial gram matrix in a single node
     {   
         std::vector<double> VECones(n,1);
-        CUBLAS_CHECK(cublasDaxpy(cublashandle_, n, &shift, VECones, 1, tmp, n))
+        CUBLAS_CHECK(cublasDaxpy(cublashandle_, n, &shift, VECones.data(), 1, tmp, n))
 
     }
    timing->stop_timing("computation");
