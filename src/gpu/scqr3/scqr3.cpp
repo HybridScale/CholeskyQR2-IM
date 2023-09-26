@@ -1,8 +1,8 @@
 #include "cholesky_qr.hpp"
-#include "cqr2bgs.hpp"
+#include "scqr3.hpp"
 
-cqr::qr2bgs::qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size) : 
-                 m_(m), n_(n), input_panel_size_(panel_size)
+cqr::qr3::qr3(std::int64_t m, std::int64_t n) : 
+                 m_(m), n_(n)
 {
     MPI_Init(NULL, NULL);
 
@@ -48,7 +48,7 @@ cqr::qr2bgs::qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size) :
     cudaR2_.resize(n_*n_);
     cudaI_.resize(n_*n_);
 
-    cudatmp_.resize(input_panel_size_*input_panel_size_);
+    cudatmp_.resize(n_*n_);
     cudatmp_.memset(0);
     cudaWtmp_.resize(localm_*n_);
     cudaWtmp_.memset(0);
@@ -56,7 +56,7 @@ cqr::qr2bgs::qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size) :
 }
 
 
-cqr::qr2bgs::~qr2bgs()
+cqr::qr3::~qr3()
 {
     cublasDestroy(cublashandle_);
     cusolverDnDestroy(cusolverhandle_);
@@ -69,16 +69,15 @@ cqr::qr2bgs::~qr2bgs()
 }
 
 
-void cqr::qr2bgs::InputMatrix(std::vector<double> &A)
+void cqr::qr3::InputMatrix(std::vector<double> &A)
 {    
 }
 
-void cqr::qr2bgs::InputMatrix(double *A)
+void cqr::qr3::InputMatrix(double *A)
 {
 }
 
-
-void cqr::qr2bgs::InputMatrix(std::string filename)
+void cqr::qr3::InputMatrix(std::string filename)
 {
 
     MPI_File fileHandle;
@@ -108,7 +107,7 @@ void cqr::qr2bgs::InputMatrix(std::string filename)
 }
 
 
-void cqr::qr2bgs::Start()
+void cqr::qr3::Start()
 {
 
     cudaAlocal_.copytodevice(Alocal_);
@@ -118,7 +117,7 @@ void cqr::qr2bgs::Start()
 
     timing->start_timing("algorithm");
 
-    cqr2bgs(cudaAlocal_, cudaR_);
+    scqr3(cudaAlocal_, cudaR_);
     
     timing->stop_timing("algorithm");
 
@@ -152,20 +151,19 @@ void cqr::qr2bgs::Start()
 }
 
 
-void cqr::qr2bgs::cqr2bgs(cudamemory<double> &A, cudamemory<double> &R)
+void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
 {
     double alpha = 1.0, beta = 0.0;
 
-
-    // First cqrbgs call
+    //First call: ShiftedCholeskyQR
     {
-        NvtxTracer T("CQR1");
-        cqrbgs(A, cudaR1_);
+        NvtxTracer T("SCQR");
+        scqr(A, cudaR1_);
     }
-    // Second cqrbgs call
+    //Second call: CholeskyQR2
     {
         NvtxTracer T("CQR2");
-        cqrbgs(A, cudaR2_);
+        cqr2(A, cudaR2_);
     }
 
     {
@@ -183,52 +181,115 @@ void cqr::qr2bgs::cqr2bgs(cudamemory<double> &A, cudamemory<double> &R)
 }
 
 
-void cqr::qr2bgs::cqrbgs(cudamemory<double> &A, cudamemory<double> &R)
-{   
-    panel_size_ = input_panel_size_;
-    int number_of_panels = ceil((double)n_ / panel_size_);
-    for(int j = 0; j < number_of_panels; ++j )
-    {   
-        panel_size_ = (j == number_of_panels-1) ? n_ - (j) * panel_size_: panel_size_;
+void cqr::qr3::cqr2(cudamemory<double> &A, cudamemory<double> &R) //CholeskyQR2 routine without block Gram-Schmidt
+{
+    double alpha = 1.0, beta = 0.0;
 
-        {
-            cudatmp_.memset();
-            NvtxTracer T("gram");
-            gramMatrix(A.data() + j*input_panel_size_, 
-                       R.data() + j*input_panel_size_*n_ + j*input_panel_size_,
-                       cudatmp_.data());
-        }
 
+    // First cqrbgs call
+    {
+        NvtxTracer T("CQR1");
+        cqr(A, cudaR1_);
+    }
+    // Second cqrbgs call
+    {
+        NvtxTracer T("CQR2");
+        cqr(A, cudaR2_);
+    }
+
+    {
         timing->start_timing("computation");
-        {
-            NvtxTracer T("chol");
-            cholesky(R.data() + j*input_panel_size_*n_ + j*input_panel_size_);
-        }
-        {
-            NvtxTracer T("Q");
-            calculateQ(A.data() + j*input_panel_size_, R.data() + j*input_panel_size_*n_ + j*input_panel_size_);
-        }
+        NvtxTracer T("R2R1");
+        CUBLAS_CHECK(cublasDgemm(cublashandle_,
+                                CUBLAS_OP_N, CUBLAS_OP_N,
+                                n_,  n_,  n_,
+                                &alpha,
+                                cudaR1_.data(), n_,
+                                cudaR2_.data(), n_,
+                                &beta, cudaR_.data(), n_));
         timing->stop_timing("computation");
-
-        if(j < number_of_panels - 1 )
-        {
-            NvtxTracer T("update");
-            updateMatrix(n_-(j+1) * input_panel_size_, n_ - input_panel_size_,
-                         A.data() + j * input_panel_size_,
-                         R.data() + j * input_panel_size_* n_ + j * input_panel_size_ + input_panel_size_);
-        }
     }
 }
 
-void cqr::qr2bgs::gramMatrix(double *A, double *R, double *tmp) 
+
+void cqr::qr3::cqr(cudamemory<double> &A, cudamemory<double> &R)
+{   
+    {
+        cudatmp_.memset();
+        NvtxTracer T("gram");
+        gramMatrix(A.data(), R.data(), cudatmp_.data());
+    }
+
+    timing->start_timing("computation");
+    {
+        NvtxTracer T("chol");
+        cholesky(R.data());
+    }
+    {
+        NvtxTracer T("Q");
+        calculateQ(A.data(), R.data());
+    }
+    timing->stop_timing("computation");
+}
+
+void cqr::qr3::scqr(cudamemory<double> &A, cudamemory<double> &R)
+{
+    {
+        cudatmp_.memset();
+        NvtxTracer T("gram");
+        gramMatrixShifted(A.data(), R.data(), cudatmp_.data());
+    }
+
+    timing->start_timing("computation");
+    {
+        NvtxTracer T("chol");
+        cholesky(R.data());
+    }
+    {
+        NvtxTracer T("Q");
+        calculateQ(A.data(), R.data());
+    }
+    timing->stop_timing("computation");
+}
+
+void cqr::qr3::FrobeniusNorm(double *A)
+{
+    double partialsumofsquares;
+
+    double *sums=NULL;
+    timing->start_timing("computation");
+    CUBLAS_CHECK(cublasDnrm2(cublashandle_,n_*localm_, A, 1, &partialsumofsquares));
+    timing->stop_timing("computation");
+
+    timing->start_timing("communication");
+    //(annot AK) Allreduce from all nodes to construct final gram matrix:
+    #ifdef NCCL
+        NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
+        NCCLCHECK(ncclAllGather(partialsumofsquares, sums, 1, ncclDouble, nccl_comm_, 0));
+    #else
+        MPI_Gather(&partialsumofsquares, 1, MPI_DOUBLE, sums, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    #endif
+    timing->stop_timing("communication");
+    if(world_rank_==0)
+    {
+        frnorm = 0.0;
+        for(auto i=0;i<world_size_;++i)
+        {
+            frnorm += sums[i];
+        }
+        frnorm=sqrt(frnorm);
+    }
+}
+
+void cqr::qr3::gramMatrix(double *A, double *R, double *tmp) 
 {
     // Calculating partial gram matrix to tmp device memory 
     // Sumation of all partial gramm matrix with mpi/nccl allreduce call
     // gemm operation to save to whole R matrix
     double alpha = 1.0, beta = 0.0;
 
-    int n = panel_size_, k = localm_;
-    int lda = n_ , ldtmp = panel_size_;
+    int n = n_, k = localm_;
+    int lda = n_ , ldtmp = n_;
     int ldi = n_, ldr = n_;
     
     timing->start_timing("computation");
@@ -249,7 +310,7 @@ void cqr::qr2bgs::gramMatrix(double *A, double *R, double *tmp)
     #ifdef NCCL
         NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
     #else
-        MPI_Allreduce(MPI_IN_PLACE, tmp, panel_size_ * panel_size_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, tmp, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     timing->stop_timing("communication");
 
@@ -267,14 +328,72 @@ void cqr::qr2bgs::gramMatrix(double *A, double *R, double *tmp)
 
 }
 
-void cqr::qr2bgs::cholesky(double *B)
+void cqr::qr3::gramMatrixShifted(double *A, double *R, double *tmp) 
+{
+    // Calculating partial gram matrix to tmp device memory 
+    // (add AK) Shift added to partial gram matrix in one node
+    // Sumation of all partial gramm matrix with mpi/nccl allreduce call
+    // gemm operation to save to whole R matrix
+    double alpha = 1.0, beta = 0.0;
+    double shift = 1e-6; //(add AK) temporarily defining shift to be this value
+
+    int n = n_, k = localm_;
+    int lda = n_ , ldtmp = n_;
+    int ldi = n_, ldr = n_;
+    int incx = 1, incy = n_; //(add AK) parameters for Daxpy for shift
+    
+    timing->start_timing("computation");
+    //(annot AK) Constructing gram matrix from A and storing it in tmp. Whatever was originally is tmp is rewritten.
+    CUBLAS_CHECK(cublasDsyrk(cublashandle_,
+                             CUBLAS_FILL_MODE_LOWER,
+                             CUBLAS_OP_N,
+                             n, k,
+                             &alpha,
+                             A, lda,
+                             &beta,
+                             tmp, ldtmp));
+    if( world_rank_ == 0) //(add AK) adding the shift along the diagonal to the partial gram matrix in a single node
+    {   
+        cudamemory<double> VECones(n);
+        VECones.memset(1);
+        CUBLAS_CHECK(cublasDaxpy(cublashandle_, n, &shift, VECones.data(), 1, tmp, n))
+
+    }
+   timing->stop_timing("computation");
+
+
+    timing->start_timing("communication");
+    //(annot AK) Allreduce from all nodes to construct final gram matrix:
+    #ifdef NCCL
+        NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
+    #else
+        MPI_Allreduce(MPI_IN_PLACE, tmp, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    #endif
+    timing->stop_timing("communication");
+
+    timing->start_timing("computation");
+    //(annot AK) Copying the calculated gram matrix (stored in tmp) to R:
+    CUBLAS_CHECK(cublasDtrmm(cublashandle_,
+                             CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_LOWER,
+                             CUBLAS_OP_N, CUBLAS_DIAG_UNIT,
+                             n, n,
+                             &alpha,
+                             cudaI_.data(), ldi,
+                             tmp, ldtmp,
+                             R, ldr));
+    timing->stop_timing("computation");
+
+}
+
+
+void cqr::qr3::cholesky(double *B)
 {
     
     size_t d_lwork = 0;     
     size_t h_lwork = 0;     
     void *h_work = nullptr; 
 
-    std::int64_t n = panel_size_, lda = n_;
+    std::int64_t n = n_, lda = n_;
 
     CUSOLVER_CHECK(cusolverDnXpotrf_bufferSize(
         cusolverhandle_, NULL, CUBLAS_FILL_MODE_LOWER, n, CUDA_R_64F, B, lda,
@@ -291,7 +410,7 @@ void cqr::qr2bgs::cholesky(double *B)
 }
 
 
-void cqr::qr2bgs::calculateQ(double *A, double *R)
+void cqr::qr3::calculateQ(double *A, double *R)
 {
     double alpha = 1.0;
     std::int64_t ldr = n_, lda = n_;
@@ -301,61 +420,8 @@ void cqr::qr2bgs::calculateQ(double *A, double *R)
                 CUBLAS_FILL_MODE_LOWER,
                 CUBLAS_OP_N,
                 CUBLAS_DIAG_NON_UNIT,
-                panel_size_, localm_, &alpha, R, ldr, A, lda);
+                n_, localm_, &alpha, R, ldr, A, lda);
 
-}
-
-
-void cqr::qr2bgs::updateMatrix(int n, int ldw, double *A, double *R)
-{
-    double alpha = 1.0, beta=0.0;
-
-    int m = localm_;
-    int lda = n_, ldr = n_;
-
-    // W = Qj^T @ Ar
-    timing->start_timing("computation");
-    CUBLAS_CHECK(cublasDgemm(cublashandle_,
-                             CUBLAS_OP_N, CUBLAS_OP_T,
-                             n, panel_size_, m,
-                             &alpha,
-                             A+panel_size_, lda,
-                             A, lda,
-                             &beta,
-                             cudaWtmp_.data(), ldw));
-    timing->stop_timing("computation");
-    
-    timing->start_timing("communication");
-    #ifdef NCCL
-        NCCLCHECK(ncclAllReduce(cudaWtmp_.data(), cudaWtmp_.data(), ldw*panel_size_, ncclDouble, ncclSum,  nccl_comm_, 0));
-    #else
-        MPI_Allreduce(MPI_IN_PLACE, cudaWtmp_.data(), ldw*panel_size_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
-    #endif
-    timing->stop_timing("communication");
-
-    alpha = -1.0;
-    beta = 1.0;
-
-    timing->start_timing("computation");
-    CUBLAS_CHECK(cublasDgemm(cublashandle_,
-                             CUBLAS_OP_N, CUBLAS_OP_N,
-                             n, m, panel_size_,
-                             &alpha,
-                             cudaWtmp_.data(), ldw,
-                             A, lda,
-                             &beta,
-                             A+panel_size_, lda));
-
-    alpha = 1.0;
-    CUBLAS_CHECK(cublasDtrmm(cublashandle_,
-                             CUBLAS_SIDE_LEFT, CUBLAS_FILL_MODE_UPPER,
-                             CUBLAS_OP_N, CUBLAS_DIAG_UNIT,
-                             n, panel_size_,
-                             &alpha,
-                             cudaI_.data(), lda,
-                             cudaWtmp_.data(), ldw,
-                             R, ldr));
-    timing->stop_timing("computation");
 }
 
 

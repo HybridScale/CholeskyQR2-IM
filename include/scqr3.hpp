@@ -23,11 +23,10 @@
 namespace cqr
 {
 
-    class qr2bgs{
+    class qr3{
     public:
-        qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size);
-        qr2bgs(std::int64_t m, std::int64_t n, std::size_t panel_num);
-        ~qr2bgs();
+        qr3(std::int64_t m, std::int64_t n);
+        ~qr3();
 
         void InputMatrix(std::vector<double> &A);
         void InputMatrix(double *A);
@@ -38,18 +37,26 @@ namespace cqr
 
      private:
 #ifdef GPU
-        void cqr2bgs(cudamemory<double> &A, cudamemory<double> &R);
-        void cqrbgs(cudamemory<double> &A, cudamemory<double> &R);
+        void scqr3(cudamemory<double> &A, cudamemory<double> &R);
+        void cqr2(cudamemory<double> &A, cudamemory<double> &R);
+        void cqr(cudamemory<double> &A, cudamemory<double> &R);
+        void scqr(cudamemory<double> &A, cudamemory<double> &R);
 #else
-        void cqr2bgs(std::vector<double> &A, std::vector<double> &R);
-        void cqrbgs(std::vector<double> &A, std::vector<double> &R);
+        void scqr3(std::vector<double> &A, std::vector<double> &R);
+        void cqr2(std::vector<double> &A, std::vector<double> &R);
+        void cqr(std::vector<double> &A, std::vector<double> &R);
+        void scqr(std::vector<double> &A, std::vector<double> &R);
 #endif
         void MPI_Warmup();
+        double FrobeniusNorm(double *A);  //(add AK) need Frobenius norm of matrix to determine shift
         void gramMatrix(double *A, double *R, double *tmp);
+        void gramMatrixShifted(double *A, double *R, double *tmp);      //(add AK) testing shifted gram matrix routine
         void cholesky(double *B);
         void calculateQ(double *A, double *R);
-        void updateMatrix(int n, int ldw, double *A, double *R);
         float get_time();
+
+        double frnorm;
+        double shift;
 
         std::int64_t n_, m_, localm_, block_size_;
         std::int64_t input_panel_size_, panel_size_;
