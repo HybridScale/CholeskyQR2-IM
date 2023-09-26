@@ -155,6 +155,13 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
 {
     double alpha = 1.0, beta = 0.0;
 
+    //Obtaining Frobenius norm of input matrix:
+    {
+        FrobeniusNorm(A.data());
+    }
+    shift=frnorm^2*m*1e-16;
+
+
     //First call: ShiftedCholeskyQR
     {
         NvtxTracer T("SCQR");
@@ -335,7 +342,6 @@ void cqr::qr3::gramMatrixShifted(double *A, double *R, double *tmp)
     // Sumation of all partial gramm matrix with mpi/nccl allreduce call
     // gemm operation to save to whole R matrix
     double alpha = 1.0, beta = 0.0;
-    double shift = 1e-6; //(add AK) temporarily defining shift to be this value
 
     int n = n_, k = localm_;
     int lda = n_ , ldtmp = n_;
