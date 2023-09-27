@@ -48,7 +48,7 @@ namespace cqr
         void scqr(std::vector<double> &A, std::vector<double> &R);
 #endif
         void MPI_Warmup();
-        double FrobeniusNorm(double *A);  //(add AK) need Frobenius norm of matrix to determine shift
+        void FrobeniusNorm(double *A);  //(add AK) need Frobenius norm of matrix to determine shift
         void gramMatrix(double *A, double *R, double *tmp);
         void gramMatrixShifted(double *A, double *R, double *tmp);      //(add AK) testing shifted gram matrix routine
         void cholesky(double *B);
@@ -69,7 +69,7 @@ namespace cqr
 
 #ifdef GPU
         cudamemory<double> cudaAlocal_;
-        cudamemory<double> cudaR_, cudaR1_, cudaR2_;
+        cudamemory<double> cudaR_, cudaR1_, cudaR2_, cudaR3_;
         cudamemory<double> cudaI_;
         cudamemory<double> cudatmp_, cudaWtmp_;
 #endif       

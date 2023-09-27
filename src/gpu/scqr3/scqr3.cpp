@@ -46,6 +46,7 @@ cqr::qr3::qr3(std::int64_t m, std::int64_t n) :
     cudaR_.resize(n_*n_);
     cudaR1_.resize(n_*n_);
     cudaR2_.resize(n_*n_);
+    cudaR3_.resize(n_*n_);
     cudaI_.resize(n_*n_);
 
     cudatmp_.resize(n_*n_);
@@ -159,7 +160,7 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
     {
         FrobeniusNorm(A.data());
     }
-    shift=frnorm^2*m*1e-16;
+    shift=pow(frnorm,2)*sqrt(m_)*1e-16;
 
 
     //First call: ShiftedCholeskyQR
@@ -170,7 +171,8 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
     //Second call: CholeskyQR2
     {
         NvtxTracer T("CQR2");
-        cqr2(A, cudaR2_);
+        cqr(A, cudaR2_);
+        cqr(A, cudaR3_);
     }
 
     {
@@ -182,6 +184,13 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
                                 &alpha,
                                 cudaR1_.data(), n_,
                                 cudaR2_.data(), n_,
+                                &beta, cudaR_.data(), n_));
+        CUBLAS_CHECK(cublasDgemm(cublashandle_,
+                                CUBLAS_OP_N, CUBLAS_OP_N,
+                                n_,  n_,  n_,
+                                &alpha,
+                                cudaR_.data(), n_,
+                                cudaR3_.data(), n_,
                                 &beta, cudaR_.data(), n_));
         timing->stop_timing("computation");
     }
@@ -263,7 +272,7 @@ void cqr::qr3::FrobeniusNorm(double *A)
 {
     double partialsumofsquares;
 
-    double *sums=NULL;
+    std::vector<double> sums(world_size_);
     timing->start_timing("computation");
     CUBLAS_CHECK(cublasDnrm2(cublashandle_,n_*localm_, A, 1, &partialsumofsquares));
     timing->stop_timing("computation");
@@ -274,7 +283,7 @@ void cqr::qr3::FrobeniusNorm(double *A)
         NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
         NCCLCHECK(ncclAllGather(partialsumofsquares, sums, 1, ncclDouble, nccl_comm_, 0));
     #else
-        MPI_Gather(&partialsumofsquares, 1, MPI_DOUBLE, sums, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Gather(&partialsumofsquares, 1, MPI_DOUBLE, sums.data(), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     #endif
     timing->stop_timing("communication");
     if(world_rank_==0)
@@ -431,7 +440,7 @@ void cqr::qr3::calculateQ(double *A, double *R)
 }
 
 
-void cqr::qr2bgs::MPI_Warmup()
+void cqr::qr3::MPI_Warmup()
 {
 #ifdef GPU
     MPI_Allreduce(MPI_IN_PLACE, cudaWtmp_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);

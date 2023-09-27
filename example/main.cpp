@@ -68,10 +68,12 @@ int main(int argc, char** argv) {
     //bool validate = vm["validate"].as<bool>();
     //----- cli program options -----//
 
-#ifdef LOOKAHEAD
+#if defined(LOOKAHEAD)
     //same api for cpu and gpu versions
     cqr::qr2bgsloohahead algorithm(m, n, block_size);
-#else 
+#elif defined(SHIFT)
+    cqr::qr3 algorithm(m, n);
+#else
     cqr::qr2bgs algorithm(m, n, block_size);
 #endif
     algorithm.InputMatrix(input_matrix_name_str);
