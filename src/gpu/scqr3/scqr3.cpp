@@ -160,14 +160,20 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
     {
         FrobeniusNorm(A.data());
     }
-    shift=pow(frnorm,2)*sqrt(m_)*1e-16;
-
-
+    shift=pow(frnorm,2)*m_*1e-16;
+    
     //First call: ShiftedCholeskyQR
     {
         NvtxTracer T("SCQR");
         scqr(A, cudaR1_);
     }
+
+    /*
+    //Saving values of A and R after application of ShiftedCholeskyQR
+    A.savematrix("step1resA.bin");
+    cudaR1_.savematrix("step1resR.bin");
+    */
+
     //Second call: CholeskyQR2
     {
         NvtxTracer T("CQR2");
@@ -255,12 +261,19 @@ void cqr::qr3::scqr(cudamemory<double> &A, cudamemory<double> &R)
         NvtxTracer T("gram");
         gramMatrixShifted(A.data(), R.data(), cudatmp_.data());
     }
-
+    /*
+    //Saving gram matrix:
+    R.savematrix("step1gram.bin");
+    */
     timing->start_timing("computation");
     {
         NvtxTracer T("chol");
         cholesky(R.data());
     }
+    /*
+    //Saving cholesky decomposition:
+    R.savematrix("step1choleskymatrix.bin");
+    */
     {
         NvtxTracer T("Q");
         calculateQ(A.data(), R.data());
@@ -270,11 +283,11 @@ void cqr::qr3::scqr(cudamemory<double> &A, cudamemory<double> &R)
 
 void cqr::qr3::FrobeniusNorm(double *A)
 {
-    double partialsumofsquares;
-
+    double sqrtofpartialsumofsquares;
+    
     std::vector<double> sums(world_size_);
     timing->start_timing("computation");
-    CUBLAS_CHECK(cublasDnrm2(cublashandle_,n_*localm_, A, 1, &partialsumofsquares));
+    CUBLAS_CHECK(cublasDnrm2(cublashandle_,n_*localm_, A, 1, &sqrtofpartialsumofsquares));  //Norm function returns the root of the sum over squares. We will need to square this quantity when gathering form all nodes.
     timing->stop_timing("computation");
 
     timing->start_timing("communication");
@@ -283,7 +296,7 @@ void cqr::qr3::FrobeniusNorm(double *A)
         NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
         NCCLCHECK(ncclAllGather(partialsumofsquares, sums, 1, ncclDouble, nccl_comm_, 0));
     #else
-        MPI_Gather(&partialsumofsquares, 1, MPI_DOUBLE, sums.data(), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Gather(&sqrtofpartialsumofsquares, 1, MPI_DOUBLE, sums.data(), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     #endif
     timing->stop_timing("communication");
     if(world_rank_==0)
@@ -291,7 +304,7 @@ void cqr::qr3::FrobeniusNorm(double *A)
         frnorm = 0.0;
         for(auto i=0;i<world_size_;++i)
         {
-            frnorm += sums[i];
+            frnorm += pow(sums[i],2.0);
         }
         frnorm=sqrt(frnorm);
     }
@@ -367,13 +380,14 @@ void cqr::qr3::gramMatrixShifted(double *A, double *R, double *tmp)
                              A, lda,
                              &beta,
                              tmp, ldtmp));
+    
     if( world_rank_ == 0) //(add AK) adding the shift along the diagonal to the partial gram matrix in a single node
     {   
         cudamemory<double> VECones(n);
         VECones.memset(1);
-        CUBLAS_CHECK(cublasDaxpy(cublashandle_, n, &shift, VECones.data(), 1, tmp, n))
-
+        CUBLAS_CHECK(cublasDaxpy(cublashandle_, n, &shift, VECones.data(), 1, tmp, n+1))
     }
+    
    timing->stop_timing("computation");
 
 
@@ -397,7 +411,6 @@ void cqr::qr3::gramMatrixShifted(double *A, double *R, double *tmp)
                              tmp, ldtmp,
                              R, ldr));
     timing->stop_timing("computation");
-
 }
 
 
