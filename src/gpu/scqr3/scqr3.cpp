@@ -160,7 +160,7 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
     {
         FrobeniusNorm(A.data());
     }
-    shift=pow(frnorm,2)*m_*1e-16;
+    shift=pow(frnorm,2)*sqrt(m_)*1e-16;
     
     //First call: ShiftedCholeskyQR
     {
