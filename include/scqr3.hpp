@@ -70,7 +70,7 @@ namespace cqr
 #ifdef GPU
         cudamemory<double> cudaAlocal_;
         cudamemory<double> cudaR_, cudaR1_, cudaR2_, cudaR3_;
-        cudamemory<double> cudaI_;
+        //cudamemory<double> cudaI_;
         cudamemory<double> cudatmp_, cudaWtmp_;
 #endif       
         std::unique_ptr<DistributedMatrix> distmatrix;

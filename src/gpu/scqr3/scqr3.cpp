@@ -47,7 +47,7 @@ cqr::qr3::qr3(std::int64_t m, std::int64_t n) :
     cudaR1_.resize(n_*n_);
     cudaR2_.resize(n_*n_);
     cudaR3_.resize(n_*n_);
-    cudaI_.resize(n_*n_);
+    //cudaI_.resize(n_*n_);
 
     cudatmp_.resize(n_*n_);
     cudatmp_.memset(0);
@@ -323,6 +323,14 @@ void cqr::qr3::gramMatrix(double *A, double *R, double *tmp)
     
     timing->start_timing("computation");
     //(annot AK) Constructing gram matrix from A and storing it in tmp. Whatever was originally is tmp is rewritten.
+    /*CUBLAS_CHECK(cublasDsyrk(cublashandle_,
+                             CUBLAS_FILL_MODE_LOWER,
+                             CUBLAS_OP_N,
+                             n, k,
+                             &alpha,
+                             A, lda,
+                             &beta,
+                             tmp, ldtmp));*/
     CUBLAS_CHECK(cublasDsyrk(cublashandle_,
                              CUBLAS_FILL_MODE_LOWER,
                              CUBLAS_OP_N,
@@ -330,7 +338,7 @@ void cqr::qr3::gramMatrix(double *A, double *R, double *tmp)
                              &alpha,
                              A, lda,
                              &beta,
-                             tmp, ldtmp));
+                             R, ldr));                             
    timing->stop_timing("computation");
 
 
@@ -339,20 +347,22 @@ void cqr::qr3::gramMatrix(double *A, double *R, double *tmp)
     #ifdef NCCL
         NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
     #else
-        MPI_Allreduce(MPI_IN_PLACE, tmp, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        //MPI_Allreduce(MPI_IN_PLACE, tmp, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, R, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     timing->stop_timing("communication");
 
     timing->start_timing("computation");
     //(annot AK) Copying the calculated gram matrix (stored in tmp) to R:
-    CUBLAS_CHECK(cublasDtrmm(cublashandle_,
+    // TODO: Should be removed if not GS (i.e. panels). R can be directly used in Dsyrk and Reduce operations. No need for cudaI_ array
+    /*CUBLAS_CHECK(cublasDtrmm(cublashandle_,
                              CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_LOWER,
                              CUBLAS_OP_N, CUBLAS_DIAG_UNIT,
                              n, n,
                              &alpha,
                              cudaI_.data(), ldi,
                              tmp, ldtmp,
-                             R, ldr));
+                             R, ldr));*/
     timing->stop_timing("computation");
 
 }
@@ -372,6 +382,14 @@ void cqr::qr3::gramMatrixShifted(double *A, double *R, double *tmp)
     
     timing->start_timing("computation");
     //(annot AK) Constructing gram matrix from A and storing it in tmp. Whatever was originally is tmp is rewritten.
+    /*CUBLAS_CHECK(cublasDsyrk(cublashandle_,
+                             CUBLAS_FILL_MODE_LOWER,
+                             CUBLAS_OP_N,
+                             n, k,
+                             &alpha,
+                             A, lda,
+                             &beta,
+                             tmp, ldtmp));*/
     CUBLAS_CHECK(cublasDsyrk(cublashandle_,
                              CUBLAS_FILL_MODE_LOWER,
                              CUBLAS_OP_N,
@@ -379,13 +397,14 @@ void cqr::qr3::gramMatrixShifted(double *A, double *R, double *tmp)
                              &alpha,
                              A, lda,
                              &beta,
-                             tmp, ldtmp));
+                             R, ldr));
     
     if( world_rank_ == 0) //(add AK) adding the shift along the diagonal to the partial gram matrix in a single node
     {   
         cudamemory<double> VECones(n);
         VECones.memset(1);
-        CUBLAS_CHECK(cublasDaxpy(cublashandle_, n, &shift, VECones.data(), 1, tmp, n+1))
+        //CUBLAS_CHECK(cublasDaxpy(cublashandle_, n, &shift, VECones.data(), 1, tmp, n+1))
+        CUBLAS_CHECK(cublasDaxpy(cublashandle_, n, &shift, VECones.data(), 1, R, n+1))
     }
     
    timing->stop_timing("computation");
@@ -396,21 +415,22 @@ void cqr::qr3::gramMatrixShifted(double *A, double *R, double *tmp)
     #ifdef NCCL
         NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
     #else
-        MPI_Allreduce(MPI_IN_PLACE, tmp, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        //MPI_Allreduce(MPI_IN_PLACE, tmp, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, R, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     timing->stop_timing("communication");
 
-    timing->start_timing("computation");
+    //timing->start_timing("computation");
     //(annot AK) Copying the calculated gram matrix (stored in tmp) to R:
-    CUBLAS_CHECK(cublasDtrmm(cublashandle_,
+    /*CUBLAS_CHECK(cublasDtrmm(cublashandle_,
                              CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_LOWER,
                              CUBLAS_OP_N, CUBLAS_DIAG_UNIT,
                              n, n,
                              &alpha,
                              cudaI_.data(), ldi,
                              tmp, ldtmp,
-                             R, ldr));
-    timing->stop_timing("computation");
+                             R, ldr));*/
+    //timing->stop_timing("computation");
 }
 
 
