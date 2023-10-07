@@ -293,8 +293,8 @@ void cqr::qr3::FrobeniusNorm(double *A)
     timing->start_timing("communication");
     //(annot AK) Allreduce from all nodes to construct final gram matrix:
     #ifdef NCCL
-        NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
-        NCCLCHECK(ncclAllGather(partialsumofsquares, sums, 1, ncclDouble, nccl_comm_, 0));
+        //NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
+        NCCLCHECK(ncclAllGather(&sqrtofpartialsumofsquares, sums.data(), 1, ncclDouble, nccl_comm_, 0));
     #else
         MPI_Gather(&sqrtofpartialsumofsquares, 1, MPI_DOUBLE, sums.data(), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     #endif
@@ -345,7 +345,7 @@ void cqr::qr3::gramMatrix(double *A, double *R, double *tmp)
     timing->start_timing("communication");
     //(annot AK) Allreduce from all nodes to construct final gram matrix:
     #ifdef NCCL
-        NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
+        NCCLCHECK(ncclAllReduce(R, R, n_ * n_, ncclDouble, ncclSum, nccl_comm_, 0));
     #else
         //MPI_Allreduce(MPI_IN_PLACE, tmp, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, R, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -413,7 +413,7 @@ void cqr::qr3::gramMatrixShifted(double *A, double *R, double *tmp)
     timing->start_timing("communication");
     //(annot AK) Allreduce from all nodes to construct final gram matrix:
     #ifdef NCCL
-        NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
+        NCCLCHECK(ncclAllReduce(R, R, n_ * n_, ncclDouble, ncclSum, nccl_comm_, 0));
     #else
         //MPI_Allreduce(MPI_IN_PLACE, tmp, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, R, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);

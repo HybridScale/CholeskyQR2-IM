@@ -34,5 +34,11 @@ if(USE_GPU)
             target_link_libraries(cqr2_gpu_lookahead_nccl PRIVATE cqr2bgslookaheadNCCL
                                                               ${Boost_LIBRARIES})
             target_compile_definitions(cqr2_gpu_lookahead_nccl PRIVATE LOOKAHEAD)
+
+            #----- Shifter NCCL  version -----#
+            add_executable(scqr3_gpu_nccl main.cpp)
+            target_link_libraries(scqr3_gpu_nccl PRIVATE scqr3NCCL
+                                                          ${Boost_LIBRARIES})
+            target_compile_definitions(scqr3_gpu_nccl PRIVATE SHIFT)
         endif()
 endif()
