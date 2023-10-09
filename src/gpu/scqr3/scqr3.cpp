@@ -160,7 +160,7 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
     {
         FrobeniusNorm(A.data());
     }
-    shift=pow(frnorm,2)*sqrt(m_)*1e-16;
+    shift=pow(frnorm,2)*sqrt(m_)*1e-16 * 1e-3;
     
     //First call: ShiftedCholeskyQR
     {
@@ -168,11 +168,10 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
         scqr(A, cudaR1_);
     }
 
-    /*
     //Saving values of A and R after application of ShiftedCholeskyQR
-    A.savematrix("step1resA.bin");
-    cudaR1_.savematrix("step1resR.bin");
-    */
+    //A.savematrix("step1resA.bin");
+    //cudaR1_.savematrix("step1resR.bin");
+    
 
     //Second call: CholeskyQR2
     {
@@ -292,12 +291,12 @@ void cqr::qr3::FrobeniusNorm(double *A)
 
     timing->start_timing("communication");
     //(annot AK) Allreduce from all nodes to construct final gram matrix:
-    #ifdef NCCL
+    //#ifdef NCCL
         //NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
-        NCCLCHECK(ncclAllGather(&sqrtofpartialsumofsquares, sums.data(), 1, ncclDouble, nccl_comm_, 0));
-    #else
+    //    NCCLCHECK(ncclAllGather(&sqrtofpartialsumofsquares, sums.data(), 1, ncclDouble, nccl_comm_, 0));
+    //#else
         MPI_Gather(&sqrtofpartialsumofsquares, 1, MPI_DOUBLE, sums.data(), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    #endif
+    //#endif
     timing->stop_timing("communication");
     if(world_rank_==0)
     {
