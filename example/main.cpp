@@ -71,6 +71,9 @@ int main(int argc, char** argv) {
 #ifdef LOOKAHEAD
     //same api for cpu and gpu versions
     cqr::qr2bgsloohahead algorithm(m, n, block_size);
+
+#elif GSCHOL
+    cqr::gschol algorithm(m, n, block_size);
 #else 
     cqr::qr2bgs algorithm(m, n, block_size);
 #endif

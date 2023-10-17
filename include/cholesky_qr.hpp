@@ -3,3 +3,4 @@
 
 #include "cqr2bgs.hpp"
 #include "cqr2bgslookahead.hpp"
+#include "gschol.hpp"

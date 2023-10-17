@@ -17,6 +17,13 @@ if(USE_GPU)
                                                   ${Boost_LIBRARIES})
     target_compile_definitions(cqr2_gpu_lookahead PRIVATE LOOKAHEAD)
 
+    #----- Gpu version -----#
+    add_executable(gschol_gpu main.cpp)
+    target_link_libraries(gschol_gpu PRIVATE gschol
+                                    ${Boost_LIBRARIES})
+    target_compile_definitions(gschol_gpu PRIVATE GSCHOL)
+
+
         if(USE_NCCL)
             #----- Gpu version -----#
             add_executable(cqr2_gpu_nccl main.cpp)
@@ -28,5 +35,13 @@ if(USE_GPU)
             target_link_libraries(cqr2_gpu_lookahead_nccl PRIVATE cqr2bgslookaheadNCCL
                                                               ${Boost_LIBRARIES})
             target_compile_definitions(cqr2_gpu_lookahead_nccl PRIVATE LOOKAHEAD)
+
+
+            #----- Gpu version -----#
+            add_executable(gschol_gpu_nccl main.cpp)
+            target_link_libraries(gschol_gpu_nccl PRIVATE gscholNCCL
+                                                          ${Boost_LIBRARIES})
+            target_compile_definitions(gschol_gpu_nccl PRIVATE GSCHOL)
+
         endif()
 endif()
