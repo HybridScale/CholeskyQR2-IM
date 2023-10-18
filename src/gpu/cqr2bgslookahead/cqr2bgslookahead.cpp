@@ -93,8 +93,31 @@ cqr::qr2bgsloohahead::~qr2bgsloohahead()
 }
 
 
-void cqr::qr2bgsloohahead::InputMatrix(std::vector<double> &A)
-{    
+void cqr::qr2bgsloohahead::InputMatrix(cudamemory<double> &A)
+{
+    MPI_File fileHandle;
+    MPI_Status status;
+    int access_mode = MPI_MODE_RDONLY; // mode for reading only
+
+
+    if(MPI_File_open(mpi_comm_, filename_, access_mode, MPI_INFO_NULL, &fileHandle) != MPI_SUCCESS)
+    {
+        std::cout << "Can't open input matrix - " << filename_ << " on rank " << world_rank_ << std::endl;
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+
+    int displacement = distmatrix->get_rank_displacement();
+    int counts = distmatrix->get_rank_count();
+
+
+    MPI_File_read_at_all(fileHandle, displacement * n_* sizeof(double),
+                        A.data(), counts,
+                        distmatrix->get_datatype(), &status);
+
+    if (MPI_File_close(&fileHandle) != MPI_SUCCESS)
+    {
+        MPI_Abort(mpi_comm_, EXIT_FAILURE);
+    }
 }
 
 void cqr::qr2bgsloohahead::InputMatrix(double *A)
@@ -151,6 +174,7 @@ void cqr::qr2bgsloohahead::Start()
     std::vector<int> displacements = distmatrix->get_displacements();
     std::vector<int> counts = distmatrix->get_counts();
 
+    /*
     cudaAlocal_.copytohost(Alocal_);
 
     MPI_Gatherv(Alocal_.data(), 
@@ -159,16 +183,25 @@ void cqr::qr2bgsloohahead::Start()
                 counts.data(),
                 displacements.data(), 
                 distmatrix->get_datatype(), 0, mpi_comm_);
-
-    if( world_rank_ == 0)
-    {   
+*/
+    validate = std::make_unique<Validate>(localm_, n_,
+                                          cudaAlocal_.data(), 
+                                          cudaR_.data(),
+                                          filename_,
+                                          cublashandle_);
+/*
         cudaR_.copytohost(R_);
         validate = std::make_unique<Validate>(m_, n_,
                                                  A_.data(), 
                                                  R_.data(),
                                                  filename_);
-        orthogonality_ = validate->orthogonality();
-        residuals_     = validate->residuals();
+*/
+    orthogonality_ = validate->orthogonality();
+    cudamemory<double> A(localm_ * n_);
+    InputMatrix(A);
+    residuals_     = validate->residuals(A);
+    if( world_rank_ == 0)
+    {  
         std::cout << "orthogonality: " << orthogonality_ << std::endl;
         std::cout << "residuals: "     << residuals_     << std::endl;
         timing->print();
