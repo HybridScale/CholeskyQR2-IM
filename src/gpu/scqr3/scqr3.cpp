@@ -190,9 +190,9 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
     //First call: ShiftedCholeskyQR
     {
         NvtxTracer T("SCQR");
-        scqr(A, cudaR1_);
+        scqr(A, R);
     }
-
+    R.savematrix("R1.bin");
     //Saving values of A and R after application of ShiftedCholeskyQR
     //A.savematrix("step1resA.bin");
     //cudaR1_.savematrix("step1resR.bin");
@@ -201,10 +201,14 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
     //Second call: CholeskyQR2
     {
         NvtxTracer T("CQR2");
-        cqr(A, cudaR2_);
-        cqr(A, cudaR3_);
+        cqr(A, R);
+        cudatmp_.savematrix("tmp1.bin");
+        R.savematrix("R2.bin");
+        cqr(A, R);
+        cudatmp_.savematrix("tmp2.bin");
+        R.savematrix("R3.bin");
     }
-
+    /*
     {
         timing->start_timing("computation");
         NvtxTracer T("R2R1");
@@ -224,6 +228,7 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
                                 &beta, cudaR_.data(), n_));
         timing->stop_timing("computation");
     }
+    */
 }
 
 
@@ -269,12 +274,21 @@ void cqr::qr3::cqr(cudamemory<double> &A, cudamemory<double> &R)
     timing->start_timing("computation");
     {
         NvtxTracer T("chol");
-        cholesky(R.data());
+        cholesky(cudatmp_.data());
     }
     {
         NvtxTracer T("Q");
-        calculateQ(A.data(), R.data());
+        calculateQ(A.data(), cudatmp_.data());
     }
+
+    double alpha = 1.0, beta = 0.0;
+    CUBLAS_CHECK(cublasDgemm(cublashandle_,
+                             CUBLAS_OP_N, CUBLAS_OP_N,
+                             n_,  n_,  n_,
+                             &alpha,
+                             R.data(), n_,
+                             cudatmp_.data(), n_,
+                             &beta, R.data(), n_));
     timing->stop_timing("computation");
 }
 
@@ -347,14 +361,6 @@ void cqr::qr3::gramMatrix(double *A, double *R, double *tmp)
     
     timing->start_timing("computation");
     //(annot AK) Constructing gram matrix from A and storing it in tmp. Whatever was originally is tmp is rewritten.
-    /*CUBLAS_CHECK(cublasDsyrk(cublashandle_,
-                             CUBLAS_FILL_MODE_LOWER,
-                             CUBLAS_OP_N,
-                             n, k,
-                             &alpha,
-                             A, lda,
-                             &beta,
-                             tmp, ldtmp));*/
     CUBLAS_CHECK(cublasDsyrk(cublashandle_,
                              CUBLAS_FILL_MODE_LOWER,
                              CUBLAS_OP_N,
@@ -362,17 +368,28 @@ void cqr::qr3::gramMatrix(double *A, double *R, double *tmp)
                              &alpha,
                              A, lda,
                              &beta,
-                             R, ldr));                             
+                             tmp, ldtmp));
+    /*
+    CUBLAS_CHECK(cublasDsyrk(cublashandle_,
+                             CUBLAS_FILL_MODE_LOWER,
+                             CUBLAS_OP_N,
+                             n, k,
+                             &alpha,
+                             A, lda,
+                             &beta,
+                             R, ldr));
+    */
    timing->stop_timing("computation");
 
 
     timing->start_timing("communication");
     //(annot AK) Allreduce from all nodes to construct final gram matrix:
     #ifdef NCCL
-        NCCLCHECK(ncclAllReduce(R, R, n_ * n_, ncclDouble, ncclSum, nccl_comm_, 0));
+        //NCCLCHECK(ncclAllReduce(R, R, n_ * n_, ncclDouble, ncclSum, nccl_comm_, 0));
+        NCCLCHECK(ncclAllReduce(tmp, tmp, n_ * n_, ncclDouble, ncclSum, nccl_comm_, 0));
     #else
-        //MPI_Allreduce(MPI_IN_PLACE, tmp, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(MPI_IN_PLACE, R, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, tmp, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        //MPI_Allreduce(MPI_IN_PLACE, R, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     timing->stop_timing("communication");
 
