@@ -4,8 +4,17 @@
 #include <cstdint>
 #include <boost/program_options.hpp>
 
-#include "cholesky_qr.hpp"
 
+
+#ifdef GSCHOL
+#include "gschol.hpp"
+#elif LOOKAHEAD
+#include "cqr2bgslookahead.hpp"
+#elif SHIFT
+#include "scqr3.hpp"
+#else
+#include "cqr2bgs.hpp"
+#endif
 
 void conflicting_options(const boost::program_options::variables_map& vm, 
                          const char* opt1, const char* opt2)
@@ -68,12 +77,14 @@ int main(int argc, char** argv) {
     //bool validate = vm["validate"].as<bool>();
     //----- cli program options -----//
 
-#if defined(LOOKAHEAD)
+#ifdef LOOKAHEAD
     //same api for cpu and gpu versions
     cqr::qr2bgsloohahead algorithm(m, n, block_size);
-#elif defined(SHIFT)
+#elif SHIFT
     cqr::qr3 algorithm(m, n);
-#else
+#elif GSCHOL
+    cqr::gschol algorithm(m, n, block_size);
+#else 
     cqr::qr2bgs algorithm(m, n, block_size);
 #endif
     algorithm.InputMatrix(input_matrix_name_str);

@@ -1,6 +1,6 @@
 
-add_library(cqr2bgs SHARED cqr2bgs.cpp)
-target_link_libraries(cqr2bgs MPI::MPI_CXX 
+add_library(gschol SHARED gschol.cpp)
+target_link_libraries(gschol MPI::MPI_CXX 
                               CUDA::cublas
                               CUDA::cusolver
                               CUDA::nvToolsExt
@@ -8,15 +8,15 @@ target_link_libraries(cqr2bgs MPI::MPI_CXX
                               validate_GPU
                               distributedmatrix)
 
-target_include_directories(cqr2bgs PUBLIC ${CMAKE_SOURCE_DIR}/include 
+target_include_directories(gschol PUBLIC ${CMAKE_SOURCE_DIR}/include 
                                           ${CMAKE_SOURCE_DIR}/include/internals)
 
-target_compile_definitions(cqr2bgs PUBLIC GPU)
+target_compile_definitions(gschol PUBLIC GPU)
 
 
 if(USE_NCCL)
-    add_library(cqr2bgsNCCL SHARED cqr2bgs.cpp)
-    target_link_libraries(cqr2bgsNCCL MPI::MPI_CXX 
+    add_library(gscholNCCL SHARED gschol.cpp)
+    target_link_libraries(gscholNCCL MPI::MPI_CXX 
                                       CUDA::cublas
                                       CUDA::cusolver
                                       CUDA::nvToolsExt
@@ -26,8 +26,8 @@ if(USE_NCCL)
                                       distributedmatrix)
 
 
-    target_include_directories(cqr2bgsNCCL PUBLIC ${CMAKE_SOURCE_DIR}/include 
+    target_include_directories(gscholNCCL PUBLIC ${CMAKE_SOURCE_DIR}/include 
                                                   ${CMAKE_SOURCE_DIR}/include/internals)
-    target_compile_definitions(cqr2bgsNCCL PUBLIC GPU NCCL)
+    target_compile_definitions(gscholNCCL PUBLIC GPU NCCL)
 
 endif()

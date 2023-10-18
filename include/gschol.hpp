@@ -25,11 +25,11 @@
 namespace cqr
 {
 
-    class qr2bgs{
+    class gschol{
     public:
-        qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size);
-        qr2bgs(std::int64_t m, std::int64_t n, std::size_t panel_num);
-        ~qr2bgs();
+        gschol(std::int64_t m, std::int64_t n, std::int64_t panel_size);
+        gschol(std::int64_t m, std::int64_t n, std::size_t panel_num);
+        ~gschol();
 
         void InputMatrix(cudamemory<double> &A);
         void InputMatrix(double *A);
@@ -40,17 +40,24 @@ namespace cqr
 
      private:
 #ifdef GPU
-        void cqr2bgs(cudamemory<double> &A, cudamemory<double> &R);
-        void cqrbgs(cudamemory<double> &A, cudamemory<double> &R);
+        void gschol2(cudamemory<double> &A, cudamemory<double> &R);
+        //void gschol(cudamemory<double> &A, cudamemory<double> &R);
+        //void save_R(double* R, double* tmp);
+        void save_R(double* R, std::size_t ldr, double* tmp, std::size_t ldtmp, int m, int n);
+        void update_R();
+        void multiply_R(double* R, double* tmp);
+        void reothrogonalize_panel(cudamemory<double> &A, int panel_number);
+        void update_rest_Matrix(cudamemory<double> &A, int panel_number);
+
 #else
-        void cqr2bgs(std::vector<double> &A, std::vector<double> &R);
-        void cqrbgs(std::vector<double> &A, std::vector<double> &R);
+        void gschol2(std::vector<double> &A, std::vector<double> &R);
+        //void gschol(std::vector<double> &A, std::vector<double> &R);
 #endif
         void MPI_Warmup();
+        void first_panel_orth();
         void gramMatrix(double *A, double *R, double *tmp);
         void cholesky(double *B);
         void calculateQ(double *A, double *R);
-        void updateMatrix(int n, int ldw, double *A, double *R);
         float get_time();
 
         std::int64_t n_, m_, localm_, block_size_;
