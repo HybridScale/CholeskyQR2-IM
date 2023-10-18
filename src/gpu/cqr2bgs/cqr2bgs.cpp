@@ -49,7 +49,7 @@ cqr::qr2bgs::qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size) :
 
     cudatmp_.resize(input_panel_size_*input_panel_size_);
     cudatmp_.memset(0);
-    cudaWtmp_.resize(localm_*n_);
+    cudaWtmp_.resize(localm_* (n_ -input_panel_size_));
     cudaWtmp_.memset(0);
 
 }
@@ -386,7 +386,7 @@ void cqr::qr2bgs::updateMatrix(int n, int ldw, double *A, double *R)
 void cqr::qr2bgs::MPI_Warmup()
 {
 #ifdef GPU
-    MPI_Allreduce(MPI_IN_PLACE, cudaWtmp_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
+    MPI_Allreduce(MPI_IN_PLACE, cudaWtmp_.data(), (n_ -input_panel_size_), MPI_DOUBLE, MPI_SUM, mpi_comm_);
 #else
     //MPI_Allreduce(MPI_IN_PLACE, cudaWtmp1_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
 #endif
