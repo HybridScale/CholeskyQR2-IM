@@ -5,7 +5,7 @@ target_link_libraries(scqr3 MPI::MPI_CXX
                               CUDA::cusolver
                               CUDA::nvToolsExt
                               cudamemory
-                              validate
+                              validate_GPU
                               distributedmatrix)
 
 target_include_directories(scqr3 PUBLIC ${CMAKE_SOURCE_DIR}/include 
@@ -22,7 +22,7 @@ if(USE_NCCL)
                                       CUDA::nvToolsExt
                                       NCCL::NCCL
                                       cudamemory
-                                      validate
+                                      validate_GPU
                                       distributedmatrix)
 
 

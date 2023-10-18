@@ -50,8 +50,6 @@ cqr::qr3::qr3(std::int64_t m, std::int64_t n) :
 
     cudatmp_.resize(n_*n_);
     cudatmp_.memset(0);
-    cudaWtmp_.resize(localm_*n_);
-    cudaWtmp_.memset(0);
 
 }
 
@@ -69,8 +67,31 @@ cqr::qr3::~qr3()
 }
 
 
-void cqr::qr3::InputMatrix(std::vector<double> &A)
-{    
+void cqr::qr3::InputMatrix(cudamemory<double> &A)
+{
+    MPI_File fileHandle;
+    MPI_Status status;
+    int access_mode = MPI_MODE_RDONLY; // mode for reading only
+
+
+    if(MPI_File_open(mpi_comm_, filename_.data(), access_mode, MPI_INFO_NULL, &fileHandle) != MPI_SUCCESS)
+    {
+        std::cout << "Can't open input matrix - " << filename_ << " on rank " << world_rank_ << std::endl;
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+
+    int displacement = distmatrix->get_rank_displacement();
+    int counts = distmatrix->get_rank_count();
+
+
+    MPI_File_read_at_all(fileHandle, displacement * n_* sizeof(double),
+                        A.data(), counts,
+                        distmatrix->get_datatype(), &status);
+
+    if (MPI_File_close(&fileHandle) != MPI_SUCCESS)
+    {
+        MPI_Abort(mpi_comm_, EXIT_FAILURE);
+    }
 }
 
 void cqr::qr3::InputMatrix(double *A)
@@ -125,6 +146,7 @@ void cqr::qr3::Start()
     std::vector<int> displacements = distmatrix->get_displacements();
     std::vector<int> counts = distmatrix->get_counts();
 
+    /*
     cudaAlocal_.copytohost(Alocal_);
 
     MPI_Gatherv(Alocal_.data(),//cudaAlocal_.data(), 
@@ -133,16 +155,20 @@ void cqr::qr3::Start()
                 counts.data(),
                 displacements.data(), 
                 distmatrix->get_datatype(), 0, mpi_comm_);
+*/
+ 
+    validate = std::make_unique<Validate>(localm_, n_,
+                                            cudaAlocal_.data(), 
+                                            cudaR_.data(),
+                                            filename_.data(),
+                                            cublashandle_);
+    orthogonality_ = validate->orthogonality();
+    cudamemory<double> A(localm_ * n_);
+    InputMatrix(A);
+    residuals_     = validate->residuals(A);
 
     if( world_rank_ == 0)
-    {   
-        cudaR_.copytohost(R_);
-        validate = std::make_unique<Validate>(m_, n_,
-                                                 A_.data(), 
-                                                 R_.data(),
-                                                 filename_.data());
-        orthogonality_ = validate->orthogonality();
-        residuals_     = validate->residuals();
+    {  
         std::cout << "orthogonality: " << orthogonality_ << std::endl;
         std::cout << "residuals: "     << residuals_     << std::endl;
         timing->print();
@@ -474,7 +500,7 @@ void cqr::qr3::calculateQ(double *A, double *R)
 void cqr::qr3::MPI_Warmup()
 {
 #ifdef GPU
-    MPI_Allreduce(MPI_IN_PLACE, cudaWtmp_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
+    MPI_Allreduce(MPI_IN_PLACE, cudatmp_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
 #else
     //MPI_Allreduce(MPI_IN_PLACE, cudaWtmp1_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
 #endif

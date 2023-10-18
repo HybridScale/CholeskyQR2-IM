@@ -10,12 +10,14 @@
 #endif
 
 #include "internals/distributedmatrix.hpp"
-#include "internals/validate.hpp"
 #include "internals/timing.hpp"
 
 #ifdef GPU
     #include "internals/cudamemory.hpp"
     #include "internals/utils.hpp"
+    #include "internals/validate_gpu.hpp"
+#else
+    #include "internals/validate.hpp"
 #endif
 
 #pragma once
@@ -28,7 +30,7 @@ namespace cqr
         qr3(std::int64_t m, std::int64_t n);
         ~qr3();
 
-        void InputMatrix(std::vector<double> &A);
+        void InputMatrix(cudamemory<double> &A);
         void InputMatrix(double *A);
         void InputMatrix(std::string filename);
 
@@ -71,7 +73,7 @@ namespace cqr
         cudamemory<double> cudaAlocal_;
         cudamemory<double> cudaR_, cudaR1_, cudaR2_, cudaR3_;
         //cudamemory<double> cudaI_;
-        cudamemory<double> cudatmp_, cudaWtmp_;
+        cudamemory<double> cudatmp_;
 #endif       
         std::unique_ptr<DistributedMatrix> distmatrix;
         std::unique_ptr<Validate> validate;
