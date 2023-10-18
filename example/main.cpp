@@ -4,8 +4,15 @@
 #include <cstdint>
 #include <boost/program_options.hpp>
 
-#include "cholesky_qr.hpp"
 
+
+#ifdef GSCHOL
+#include "gschol.hpp"
+#elif LOOKAHEAD
+#include "cqr2bgslookahead.hpp"
+#else
+#include "cqr2bgs.hpp"
+#endif
 
 void conflicting_options(const boost::program_options::variables_map& vm, 
                          const char* opt1, const char* opt2)
@@ -71,6 +78,8 @@ int main(int argc, char** argv) {
 #ifdef LOOKAHEAD
     //same api for cpu and gpu versions
     cqr::qr2bgsloohahead algorithm(m, n, block_size);
+#elif GSCHOL
+    cqr::gschol algorithm(m, n, block_size);
 #else 
     cqr::qr2bgs algorithm(m, n, block_size);
 #endif
