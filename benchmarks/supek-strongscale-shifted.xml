@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jube>
+
+  <benchmark name="cqr2" outpath="supek_test">
+    <comment>strongscale shifted choleskyQR3 MPI 120,300k</comment>
+    
+    <parameterset name="configuration">
+      <parameter name="root_path">/lustre/group/UIP-2020-02-4559/cholesky_qrbgs</parameter>
+      <parameter name="build_path">${root_path}/build-gnu-shifted</parameter>
+      <parameter name="matrix_path">/lustre/group/UIP-2020-02-4559/DATA/cholesky_qr/strong_scaling_matrices</parameter>
+    </parameterset>
+    
+    <!-- job configuration pararameter -->
+    <parameterset name="systemParameter" init_with="platform.xml">
+      <parameter name="queue">gpu</parameter>
+      <parameter name="args_exec">--m ${m} --n ${n} --b ${panel_size} --input=${inputmatrix}</parameter>
+      <parameter name="executable_versions">scqr3_gpu, scqr3_gpu_nccl</parameter>
+      <parameter name="executable" separator=";">${build_path}/${executable_versions}</parameter> 
+      <parameter name="timelimit">00:60:00</parameter>
+      
+      <parameter name="nodes" type="int">1,2,3,4,5,6,7,8,9,10,11,12</parameter>
+      <parameter name="taskspernode" type="int">4</parameter>
+      <parameter name="threadspertask" type="int">16</parameter>
+      <parameter name="gpu" type="int">4</parameter>
+      <parameter name="measurement">time -p</parameter>
+      <parameter name="project">UIP-2020-02-4559</parameter>
+      <parameter name="env" separator=";">
+$jube_wp_envstr
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+echo "cuda visible devices $CUDA_VISIBLE_DEVICES"
+source ${root_path}/supek_activate_gnu.sh
+
+      </parameter>
+      
+    </parameterset>
+    
+    <parameterset name="input_param">
+      <parameter name="m" typ="int">300000,120000</parameter>
+      <!--<parameter name="m" typ="int">300000</parameter>-->
+      <parameter name="n" typ="int" mode="python">",".join(str(int(percent*${m})) for percent in [0.01,0.05,0.1])</parameter>
+      <!--<parameter name="n" typ="int">15000</parameter>-->
+      <!--<parameter name="panel_size" mode="python">int(${n}/6)</parameter>-->
+      <parameter name="panel_size" typ="int" mode="python">int(${n})</parameter>
+      <parameter name="cond_num" typ="int">01</parameter>
+      <parameter name="matrixname">matrix_${m}_${n}_1.0e+${cond_num}_1.bin</parameter>
+      <parameter name="inputmatrix">${matrix_path}/${matrixname}</parameter>
+    </parameterset>
+    
+    <step name="execute" iterations="10">
+      <use>configuration</use>
+      <use>input_param</use>
+      <use>systemParameter</use>
+      <use from="platform.xml">executeset</use>
+      <use from="platform.xml">executesub</use>
+      <use from="platform.xml">jobfiles</use>
+      <do done_file="$done_file">$submit -W umask=007 $submit_script</do>
+    </step>
+
+    <!-- 888888888888888888888888888888888888888888888888888888888888888888888888888 -->
+    
+    <!-- pattern definitions used to create the result table -->
+    <patternset name="pattern">
+      <pattern name="ortho" type="float" dotall="False" mode="pattern">orthogonality: $jube_pat_fp</pattern>
+      <pattern name="res" type="float" dotall="False" mode="pattern">residuals: $jube_pat_fp</pattern>
+      <pattern name="totaltime" type="float" dotall="False" mode="pattern">algorithm: Value: $jube_pat_fp</pattern>
+      <pattern name="computation" type="float" dotall="False" mode="pattern">computation: Value: $jube_pat_fp</pattern>
+      <pattern name="communication" type="float" dotall="False" mode="pattern">communication: Value: $jube_pat_fp</pattern>
+    </patternset>
+    
+    <!-- use pattern to analyse previous steps -->
+    <analyser name="analyse"><!-- reduce="false"> -->
+      <use>pattern</use>
+      <analyse step="execute">
+        <file>job.out</file>
+      </analyse>
+    </analyser>
+
+    <result>
+      <use>analyse</use>
+      <table name="stats" style="pretty" separator="," transpose="False" sort="executable_versions,m,n,nodes">
+        <column>executable_versions</column>
+        <column>m</column>
+        <column>n</column>
+        <column>panel_size</column>
+        <column>cond_num</column>
+        <column>nodes</column>
+        <column>ortho</column>
+        <column>res</column>
+        <column>totaltime_avg</column>
+        <column>totaltime_min</column>
+        <column>totaltime_max</column>
+        <column>totaltime_std</column>
+      </table>
+    </result>
+
+    <!-- create result table -->
+    <result>
+      <use>analyse</use>
+      <table name="result" style="pretty" separator="," transpose="False" sort="executable_versions,m,n,nodes">
+        <column>executable_versions</column>
+        <column>m</column>
+        <column>n</column>
+        <column>panel_size</column>
+        <column>cond_num</column>
+        <column>nodes</column>
+        <column>ortho_avg</column>
+        <column>res_avg</column>
+        <column>totaltime_avg</column>
+        <column>computation_avg</column>
+        <column>communication_avg</column>
+      </table>
+    </result>
+  </benchmark>
+</jube>
