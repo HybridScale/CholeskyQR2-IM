@@ -5,6 +5,7 @@
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
+#include <nccl.h>
 
 #include "mpi.h"
 
@@ -35,10 +36,10 @@ class Validate
             MPI_Comm_rank(MPI_COMM_WORLD, &world_rank_);
 
             if (world_rank_ == 0) 
-                NCCLCHECK(ncclGetUniqueId(&NCCLid_));
+                ncclGetUniqueId(&NCCLid_);
 
             MPI_Bcast(&NCCLid_, sizeof(NCCLid_), MPI_BYTE, 0, MPI_COMM_WORLD);
-            NCCLCHECK(ncclCommInitRank(&nccl_comm_, world_size_, NCCLid_, world_rank_));
+            ncclCommInitRank(&nccl_comm_, world_size_, NCCLid_, world_rank_);
          };
 
         double orthogonality();

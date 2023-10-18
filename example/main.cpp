@@ -4,8 +4,13 @@
 #include <cstdint>
 #include <boost/program_options.hpp>
 
-#include "cholesky_qr.hpp"
 
+
+#ifdef GSCHOL
+#include "gschol.hpp"
+#else
+#include "cholesky_qr.hpp"
+#endif
 
 void conflicting_options(const boost::program_options::variables_map& vm, 
                          const char* opt1, const char* opt2)

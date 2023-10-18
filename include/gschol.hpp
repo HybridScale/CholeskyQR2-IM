@@ -10,12 +10,14 @@
 #endif
 
 #include "internals/distributedmatrix.hpp"
-#include "internals/validate.hpp"
 #include "internals/timing.hpp"
 
 #ifdef GPU
     #include "internals/cudamemory.hpp"
     #include "internals/utils.hpp"
+    #include "internals/validate_gpu.hpp"
+#else
+    #include "internals/validate.hpp"
 #endif
 
 #pragma once
@@ -29,7 +31,7 @@ namespace cqr
         gschol(std::int64_t m, std::int64_t n, std::size_t panel_num);
         ~gschol();
 
-        void InputMatrix(std::vector<double> &A);
+        void InputMatrix(cudamemory<double> &A);
         void InputMatrix(double *A);
         void InputMatrix(std::string filename);
 
@@ -42,7 +44,6 @@ namespace cqr
         //void gschol(cudamemory<double> &A, cudamemory<double> &R);
         //void save_R(double* R, double* tmp);
         void save_R(double* R, std::size_t ldr, double* tmp, std::size_t ldtmp, int m, int n);
-        void save_triangular_R(double* R, std::size_t ldr, double* tmp, std::size_t ldtmp, int m, int n);
         void update_R();
         void multiply_R(double* R, double* tmp);
         void reothrogonalize_panel(cudamemory<double> &A, int panel_number);
@@ -57,9 +58,6 @@ namespace cqr
         void gramMatrix(double *A, double *R, double *tmp);
         void cholesky(double *B);
         void calculateQ(double *A, double *R);
-        void updateMatrix(int n, int ldw, double *A, double *R);
-        void updateMatrix(int m, int n, int k,  double *A, double *R);
-
         float get_time();
 
         std::int64_t n_, m_, localm_, block_size_;
