@@ -8,8 +8,10 @@
 
 #ifdef GSCHOL
 #include "gschol.hpp"
+#elif LOOKAHEAD
+#include "cqr2bgslookahead.hpp"
 #else
-#include "cholesky_qr.hpp"
+#include "cqr2bgs.hpp"
 #endif
 
 void conflicting_options(const boost::program_options::variables_map& vm, 
@@ -76,7 +78,6 @@ int main(int argc, char** argv) {
 #ifdef LOOKAHEAD
     //same api for cpu and gpu versions
     cqr::qr2bgsloohahead algorithm(m, n, block_size);
-
 #elif GSCHOL
     cqr::gschol algorithm(m, n, block_size);
 #else 

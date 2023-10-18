@@ -1,7 +1,5 @@
 #include <string>
 
-//#include "cholesky_qr.hpp"
-//#include "cqr2bgs.hpp"
 #include "gschol.hpp"
 
 cqr::gschol::gschol(std::int64_t m, std::int64_t n, std::int64_t panel_size) : 

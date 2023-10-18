@@ -1,4 +1,3 @@
-#include "cholesky_qr.hpp"
 #include "cqr2bgslookahead.hpp"
 
 cqr::qr2bgsloohahead::qr2bgsloohahead(std::int64_t m, std::int64_t n, std::int64_t panel_size) : 
