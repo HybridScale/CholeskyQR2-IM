@@ -17,6 +17,12 @@ if(USE_GPU)
                                                   ${Boost_LIBRARIES})
     target_compile_definitions(cqr2_gpu_lookahead PRIVATE LOOKAHEAD)
 
+    #----- Shifted Cholesky version -----#
+    add_executable(scqr3_gpu main.cpp)
+    target_link_libraries(scqr3_gpu PRIVATE scqr3
+                                                  ${Boost_LIBRARIES})
+    target_compile_definitions(scqr3_gpu PRIVATE SHIFT)
+    
     #----- Gpu version -----#
     add_executable(gschol_gpu main.cpp)
     target_link_libraries(gschol_gpu PRIVATE gschol
@@ -36,6 +42,11 @@ if(USE_GPU)
                                                               ${Boost_LIBRARIES})
             target_compile_definitions(cqr2_gpu_lookahead_nccl PRIVATE LOOKAHEAD)
 
+            #----- Shifter NCCL  version -----#
+            add_executable(scqr3_gpu_nccl main.cpp)
+            target_link_libraries(scqr3_gpu_nccl PRIVATE scqr3NCCL
+                                                          ${Boost_LIBRARIES})
+            target_compile_definitions(scqr3_gpu_nccl PRIVATE SHIFT)
 
             #----- Gpu version -----#
             add_executable(gschol_gpu_nccl main.cpp)

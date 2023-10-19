@@ -10,6 +10,8 @@
 #include "gschol.hpp"
 #elif LOOKAHEAD
 #include "cqr2bgslookahead.hpp"
+#elif SHIFT
+#include "scqr3.hpp"
 #else
 #include "cqr2bgs.hpp"
 #endif
@@ -78,6 +80,8 @@ int main(int argc, char** argv) {
 #ifdef LOOKAHEAD
     //same api for cpu and gpu versions
     cqr::qr2bgsloohahead algorithm(m, n, block_size);
+#elif SHIFT
+    cqr::qr3 algorithm(m, n);
 #elif GSCHOL
     cqr::gschol algorithm(m, n, block_size);
 #else 
