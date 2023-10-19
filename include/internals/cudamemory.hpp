@@ -32,4 +32,6 @@ class cudamemory
         void copytodevice(std::vector<T> &host);
 
         void savematrix(const char* filename);
+
+        void release();
 };
