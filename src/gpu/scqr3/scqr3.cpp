@@ -45,10 +45,6 @@ cqr::qr3::qr3(std::int64_t m, std::int64_t n) :
     cudaR_.resize(n_*n_);
     cudaR1_.resize(n_*n_);
     cudaR2_.resize(n_*n_);
-
-    cudatmp_.resize(1);
-    //cudatmp_.memset(0);
-
 }
 
 
@@ -208,9 +204,8 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
 void cqr::qr3::cqr(cudamemory<double> &A, cudamemory<double> &R)
 {   
     {
-        cudatmp_.memset();
         NvtxTracer T("gram");
-        gramMatrix(A.data(), R.data(), cudatmp_.data());
+        gramMatrix(A.data(), R.data());
     }
 
     timing->start_timing("computation");
@@ -229,7 +224,7 @@ void cqr::qr3::scqr(cudamemory<double> &A, cudamemory<double> &R)
 {
     {
         NvtxTracer T("gram");
-        gramMatrixShifted(A.data(), R.data(), cudatmp_.data());
+        gramMatrixShifted(A.data(), R.data());
     }
     timing->start_timing("computation");
     {
@@ -267,7 +262,7 @@ void cqr::qr3::FrobeniusNorm(double *A)
     }
 }
 
-void cqr::qr3::gramMatrix(double *A, double *R, double *tmp) 
+void cqr::qr3::gramMatrix(double *A, double *R) 
 {
     // Calculating partial gram matrix to tmp device memory 
     // Sumation of all partial gramm matrix with mpi/nccl allreduce call
@@ -301,7 +296,7 @@ void cqr::qr3::gramMatrix(double *A, double *R, double *tmp)
     timing->stop_timing("communication");
 }
 
-void cqr::qr3::gramMatrixShifted(double *A, double *R, double *tmp) 
+void cqr::qr3::gramMatrixShifted(double *A, double *R) 
 {
     // Calculating partial gram matrix to tmp device memory 
     // (add AK) Shift added to partial gram matrix in one node

@@ -40,19 +40,17 @@ namespace cqr
      private:
 #ifdef GPU
         void scqr3(cudamemory<double> &A, cudamemory<double> &R);
-        void cqr2(cudamemory<double> &A, cudamemory<double> &R);
         void cqr(cudamemory<double> &A, cudamemory<double> &R);
         void scqr(cudamemory<double> &A, cudamemory<double> &R);
 #else
         void scqr3(std::vector<double> &A, std::vector<double> &R);
-        void cqr2(std::vector<double> &A, std::vector<double> &R);
         void cqr(std::vector<double> &A, std::vector<double> &R);
         void scqr(std::vector<double> &A, std::vector<double> &R);
 #endif
         void MPI_Warmup();
         void FrobeniusNorm(double *A);  //(add AK) need Frobenius norm of matrix to determine shift
-        void gramMatrix(double *A, double *R, double *tmp);
-        void gramMatrixShifted(double *A, double *R, double *tmp);      //(add AK) testing shifted gram matrix routine
+        void gramMatrix(double *A, double *R);
+        void gramMatrixShifted(double *A, double *R);      //(add AK) testing shifted gram matrix routine
         void cholesky(double *B);
         void calculateQ(double *A, double *R);
         float get_time();
@@ -71,9 +69,7 @@ namespace cqr
 
 #ifdef GPU
         cudamemory<double> cudaAlocal_;
-        cudamemory<double> cudaR_, cudaR1_, cudaR2_, cudaR3_;
-        //cudamemory<double> cudaI_;
-        cudamemory<double> cudatmp_;
+        cudamemory<double> cudaR_, cudaR1_, cudaR2_;
 #endif       
         std::unique_ptr<DistributedMatrix> distmatrix;
         std::unique_ptr<Validate> validate;
