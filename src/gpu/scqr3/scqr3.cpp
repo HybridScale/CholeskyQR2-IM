@@ -45,11 +45,10 @@ cqr::qr3::qr3(std::int64_t m, std::int64_t n) :
     cudaR_.resize(n_*n_);
     cudaR1_.resize(n_*n_);
     cudaR2_.resize(n_*n_);
-    cudaR3_.resize(n_*n_);
-    //cudaI_.resize(n_*n_);
 
-    cudatmp_.resize(n_*n_);
-    cudatmp_.memset(0);
+
+    cudatmp_.resize(1);
+    //cudatmp_.memset(0);
 
 }
 
@@ -190,9 +189,9 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
     //First call: ShiftedCholeskyQR
     {
         NvtxTracer T("SCQR");
-        scqr(A, R);
+        scqr(A, cudaR_);
     }
-    R.savematrix("R1.bin");
+    //R.savematrix("R1.bin");
     //Saving values of A and R after application of ShiftedCholeskyQR
     //A.savematrix("step1resA.bin");
     //cudaR1_.savematrix("step1resR.bin");
@@ -201,12 +200,29 @@ void cqr::qr3::scqr3(cudamemory<double> &A, cudamemory<double> &R)
     //Second call: CholeskyQR2
     {
         NvtxTracer T("CQR2");
-        cqr(A, R);
-        cudatmp_.savematrix("tmp1.bin");
-        R.savematrix("R2.bin");
-        cqr(A, R);
-        cudatmp_.savematrix("tmp2.bin");
-        R.savematrix("R3.bin");
+        cqr(A, cudaR1_);
+
+        double alpha = 1.0, beta = 0.0;
+        CUBLAS_CHECK(cublasDgemm(cublashandle_,
+                                CUBLAS_OP_N, CUBLAS_OP_N,
+                                n_,  n_,  n_,
+                                &alpha,
+                                cudaR_.data(), n_,
+                                cudaR1_.data(), n_,
+                                &beta, cudaR2_.data(), n_));
+
+        //cudatmp_.savematrix("tmp1.bin");
+        //cudaR1_.savematrix("R2.bin");
+        cqr(A, cudaR1_);
+        CUBLAS_CHECK(cublasDgemm(cublashandle_,
+                                CUBLAS_OP_N, CUBLAS_OP_N,
+                                n_,  n_,  n_,
+                                &alpha,
+                                cudaR2_.data(), n_,
+                                cudaR1_.data(), n_,
+                                &beta, cudaR_.data(), n_));
+        //cudatmp_.savematrix("tmp2.bin");
+        //R.savematrix("R3.bin");
     }
     /*
     {
@@ -274,28 +290,19 @@ void cqr::qr3::cqr(cudamemory<double> &A, cudamemory<double> &R)
     timing->start_timing("computation");
     {
         NvtxTracer T("chol");
-        cholesky(cudatmp_.data());
+        cholesky(R.data());
     }
     {
         NvtxTracer T("Q");
-        calculateQ(A.data(), cudatmp_.data());
+        calculateQ(A.data(), R.data());
     }
-
-    double alpha = 1.0, beta = 0.0;
-    CUBLAS_CHECK(cublasDgemm(cublashandle_,
-                             CUBLAS_OP_N, CUBLAS_OP_N,
-                             n_,  n_,  n_,
-                             &alpha,
-                             R.data(), n_,
-                             cudatmp_.data(), n_,
-                             &beta, R.data(), n_));
     timing->stop_timing("computation");
 }
 
 void cqr::qr3::scqr(cudamemory<double> &A, cudamemory<double> &R)
 {
     {
-        cudatmp_.memset();
+        //cudatmp_.memset();
         NvtxTracer T("gram");
         gramMatrixShifted(A.data(), R.data(), cudatmp_.data());
     }
@@ -361,14 +368,6 @@ void cqr::qr3::gramMatrix(double *A, double *R, double *tmp)
     
     timing->start_timing("computation");
     //(annot AK) Constructing gram matrix from A and storing it in tmp. Whatever was originally is tmp is rewritten.
-    CUBLAS_CHECK(cublasDsyrk(cublashandle_,
-                             CUBLAS_FILL_MODE_LOWER,
-                             CUBLAS_OP_N,
-                             n, k,
-                             &alpha,
-                             A, lda,
-                             &beta,
-                             tmp, ldtmp));
     /*
     CUBLAS_CHECK(cublasDsyrk(cublashandle_,
                              CUBLAS_FILL_MODE_LOWER,
@@ -377,23 +376,32 @@ void cqr::qr3::gramMatrix(double *A, double *R, double *tmp)
                              &alpha,
                              A, lda,
                              &beta,
-                             R, ldr));
+                             tmp, ldtmp));
     */
+    CUBLAS_CHECK(cublasDsyrk(cublashandle_,
+                             CUBLAS_FILL_MODE_LOWER,
+                             CUBLAS_OP_N,
+                             n, k,
+                             &alpha,
+                             A, lda,
+                             &beta,
+                             R, ldr));
+    
    timing->stop_timing("computation");
 
 
     timing->start_timing("communication");
     //(annot AK) Allreduce from all nodes to construct final gram matrix:
     #ifdef NCCL
-        //NCCLCHECK(ncclAllReduce(R, R, n_ * n_, ncclDouble, ncclSum, nccl_comm_, 0));
-        NCCLCHECK(ncclAllReduce(tmp, tmp, n_ * n_, ncclDouble, ncclSum, nccl_comm_, 0));
+        NCCLCHECK(ncclAllReduce(R, R, n_ * n_, ncclDouble, ncclSum, nccl_comm_, 0));
+        //NCCLCHECK(ncclAllReduce(tmp, tmp, n_ * n_, ncclDouble, ncclSum, nccl_comm_, 0));
     #else
-        MPI_Allreduce(MPI_IN_PLACE, tmp, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        //MPI_Allreduce(MPI_IN_PLACE, R, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        //MPI_Allreduce(MPI_IN_PLACE, tmp, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, R, n_ * n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
     timing->stop_timing("communication");
 
-    timing->start_timing("computation");
+    //timing->start_timing("computation");
     //(annot AK) Copying the calculated gram matrix (stored in tmp) to R:
     // TODO: Should be removed if not GS (i.e. panels). R can be directly used in Dsyrk and Reduce operations. No need for cudaI_ array
     /*CUBLAS_CHECK(cublasDtrmm(cublashandle_,
@@ -404,7 +412,7 @@ void cqr::qr3::gramMatrix(double *A, double *R, double *tmp)
                              cudaI_.data(), ldi,
                              tmp, ldtmp,
                              R, ldr));*/
-    timing->stop_timing("computation");
+    //timing->stop_timing("computation");
 
 }
 
@@ -517,7 +525,7 @@ void cqr::qr3::calculateQ(double *A, double *R)
 void cqr::qr3::MPI_Warmup()
 {
 #ifdef GPU
-    MPI_Allreduce(MPI_IN_PLACE, cudatmp_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
+    MPI_Allreduce(MPI_IN_PLACE, cudaR1_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
 #else
     //MPI_Allreduce(MPI_IN_PLACE, cudaWtmp1_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
 #endif
