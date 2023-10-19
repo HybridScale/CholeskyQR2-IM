@@ -149,6 +149,9 @@ void cqr::gschol::Start()
     
     timing->stop_timing("algorithm");
 
+    cudatmp_.release();
+    cudaWtmp_.release();
+
     cudaDeviceSynchronize();
     std::vector<int> displacements = distmatrix->get_displacements();
     std::vector<int> counts = distmatrix->get_counts();
