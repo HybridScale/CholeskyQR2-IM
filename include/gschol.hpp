@@ -7,6 +7,9 @@
     #include <cublas_v2.h>
     #include <cuda_runtime.h>
     #include <cusolverDn.h>
+#else
+    #define MKL_INT std::int64_t
+    #include "mkl.h" // ili mozda samo blas
 #endif
 
 #include "internals/distributedmatrix.hpp"
@@ -30,35 +33,36 @@ namespace cqr
         gschol(std::int64_t m, std::int64_t n, std::int64_t panel_size);
         gschol(std::int64_t m, std::int64_t n, std::size_t panel_num);
         ~gschol();
-
+#ifdef GPU
         void InputMatrix(cudamemory<double> &A);
+#endif
         void InputMatrix(double *A);
         void InputMatrix(std::string filename);
-
         void Start();
         void Validate_output();
 
      private:
 #ifdef GPU
         void gschol2(cudamemory<double> &A, cudamemory<double> &R);
-        //void gschol(cudamemory<double> &A, cudamemory<double> &R);
-        //void save_R(double* R, double* tmp);
-        void save_R(double* R, std::size_t ldr, double* tmp, std::size_t ldtmp, int m, int n);
-        void update_R();
-        void multiply_R(double* R, double* tmp);
         void reothrogonalize_panel(cudamemory<double> &A, int panel_number);
         void update_rest_Matrix(cudamemory<double> &A, int panel_number);
-
 #else
         void gschol2(std::vector<double> &A, std::vector<double> &R);
-        //void gschol(std::vector<double> &A, std::vector<double> &R);
+        void reothrogonalize_panel(std::vector<double> &A, int panel_number);
+        void update_rest_Matrix(std::vector<double> &A, int panel_number);
 #endif
+        void save_R(double* R, std::int64_t ldr, double* tmp, std::int64_t ldtmp, std::int64_t m, std::int64_t n);
+        void update_R();
+        void multiply_R(double* R, double* tmp);
+
         void MPI_Warmup();
         void first_panel_orth();
-        void gramMatrix(double *A, double *R, double *tmp);
+        void gramMatrix(double *A, double *tmp);
         void cholesky(double *B);
         void calculateQ(double *A, double *R);
         float get_time();
+        void savematrix(const char* filename, std::vector<double> &vec);
+        void vector_memset_zero(std::vector<double> &vec);
 
         std::int64_t n_, m_, localm_, block_size_;
         std::int64_t input_panel_size_, panel_size_;
@@ -68,6 +72,8 @@ namespace cqr
         std::vector<double> A_;
         std::vector<double> Alocal_;
         std::vector<double> R_;
+        std::vector<double> tmp_, Wtmp_;
+
 
 #ifdef GPU
         cudamemory<double> cudaAlocal_;
@@ -79,6 +85,8 @@ namespace cqr
         std::unique_ptr<Validate> validate;
 #ifdef GPU
         std::unique_ptr<TimingGpu> timing;
+#else
+        std::unique_ptr<Timing> timing;
 #endif
 
         double orthogonality_, residuals_;
