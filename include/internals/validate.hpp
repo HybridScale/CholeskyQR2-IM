@@ -1,6 +1,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "mpi.h"
+
 #define MKL_INT std::int64_t
 #include "mkl.h"
 
@@ -12,9 +14,7 @@ class Validate
         std::int64_t m_, n_, size_;
         double *Q_, *R_;
         const char *filename_;
-
-        void InputMatrix(std::vector<double> &A);
-
+        
     public:
         Validate(std::int64_t m, std::int64_t n, double *Q, double *R, const char *file):
          m_(m), n_(n), Q_(Q), R_(R), filename_(file)
@@ -23,6 +23,6 @@ class Validate
          };
 
         double orthogonality();
-        double residuals();
+        double residuals(std::vector<double> &A);
 
 };

@@ -18,6 +18,8 @@ double Validate::orthogonality()
           Q_, &n_,
           &beta, C.data(), &n_);
 
+    MPI_Allreduce(MPI_IN_PLACE, C.data(), n_*n_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
 
     std::vector<double> I(n_, 1);   
 
@@ -32,7 +34,7 @@ double Validate::orthogonality()
 }
 
 
-double Validate::residuals()
+double Validate::residuals(std::vector<double> &A)
 {
     double norm = -14.0;
     double normA = -14.0;
@@ -47,36 +49,22 @@ double Validate::residuals()
           &alpha, R_, &n_,
           Q_, &n_);
 
-    {
-        std::vector<double> A(size_);
-        InputMatrix(A);
 
-        normA = dnrm2( &size_, A.data(), &incx);
-        
-        alpha = -1.0;
-        daxpy(&size_, &alpha, A.data(), &incx, Q_, &incx);
-
-
-    }  
+    normA = dnrm2( &size_, A.data(), &incx);
+    normA *= normA;
+    MPI_Allreduce(MPI_IN_PLACE, &normA, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     
+    normA = std::sqrt(normA);
+        
+    alpha = -1.0;
+    daxpy(&size_, &alpha, A.data(), &incx, Q_, &incx);
+
     norm = dnrm2( &size_, Q_, &incx);
+    norm *= norm;
+    MPI_Allreduce(MPI_IN_PLACE, &norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    norm = std::sqrt(norm);
 
     return (norm/normA);                      
 
-}
-
-
-void Validate::InputMatrix(std::vector<double> &A)
-{
-    std::ifstream file(filename_, std::ios::in | std::ios::binary);
-    
-    if (file.is_open())
-    {   
-        for(int i=0; i< size_; ++i)
-        {
-            file.read( reinterpret_cast<char*>( &A[i] ), sizeof(double) );
-        }
-    }
-    else
-        std::cout << "File not opened while validate!!!" << std::endl;
 }

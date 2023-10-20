@@ -114,8 +114,8 @@ void cqr::gschol::Start()
     orthogonality_ = validate->orthogonality();
     std::vector<double> A(localm_ * n_);
     InputMatrix(A.data());
-    //residuals_     = validate->residuals(A);
-    residuals_     = validate->residuals();
+    residuals_     = validate->residuals(A);
+    //residuals_     = validate->residuals();
     if( world_rank_ == 0)
     {
         std::cout << "orthogonality: " << orthogonality_ << std::endl;
