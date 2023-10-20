@@ -4,6 +4,11 @@
 
 #----- Cpu lookahead version -----#
 
+#----- Cpu gram-schmidt with chol -----#
+add_executable(gschol_cpu main.cpp)
+target_link_libraries(gschol_cpu PRIVATE gscholcpu
+                                ${Boost_LIBRARIES})
+target_compile_definitions(gschol_cpu PRIVATE GSCHOL)
 
 if(USE_GPU)
     #----- Gpu version -----#
