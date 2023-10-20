@@ -136,6 +136,9 @@ void cqr::qr3::Start()
     
     timing->stop_timing("algorithm");
 
+    cudaR1_.release();
+    cudaR2_.release();
+
     cudaDeviceSynchronize();
     std::vector<int> displacements = distmatrix->get_displacements();
     std::vector<int> counts = distmatrix->get_counts();

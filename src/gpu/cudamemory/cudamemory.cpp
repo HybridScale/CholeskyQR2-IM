@@ -75,3 +75,13 @@ template <typename T> void cudamemory<T>::savematrix(const char* filename)
         std::cout << "File not opened!!!" << std::endl;
         file.close();
 }
+
+template <typename T>
+void cudamemory<T>::release()
+{
+    if(cudaptr != nullptr)
+    {
+        CUDA_CHECK(cudaFree(cudaptr));
+        cudaptr = nullptr;
+    }
+}

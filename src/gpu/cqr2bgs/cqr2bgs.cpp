@@ -144,6 +144,13 @@ void cqr::qr2bgs::Start()
     
     timing->stop_timing("algorithm");
 
+    cudaR1_.release();
+    cudaR2_.release();
+    cudaI_.release();
+
+    cudatmp_.release();
+    cudaWtmp_.release();
+
     cudaDeviceSynchronize();
     std::vector<int> displacements = distmatrix->get_displacements();
     std::vector<int> counts = distmatrix->get_counts();

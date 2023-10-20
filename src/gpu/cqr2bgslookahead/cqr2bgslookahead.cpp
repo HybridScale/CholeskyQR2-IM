@@ -169,6 +169,15 @@ void cqr::qr2bgsloohahead::Start()
 
     timing->stop_timing("algorithm");
 
+    cudaR1_.release();
+    cudaR2_.release();
+    cudaI_.release();
+
+    cudatmp_.release();
+    cudatmpqr2_.release();
+    cudaWtmp1_.release();
+    cudaWtmp2_.release();
+
     cudaStreamSynchronize(stream_panelqr1);
 
     std::vector<int> displacements = distmatrix->get_displacements();
