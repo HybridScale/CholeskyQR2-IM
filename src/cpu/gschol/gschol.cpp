@@ -22,19 +22,10 @@ cqr::gschol::gschol(std::int64_t m, std::int64_t n, std::int64_t panel_size) :
 
     localm_    = distmatrix->get_rank_localm();
 
-    /*
-    if (world_rank_ == 0)
-    {
-        size = m_ * n_;
-        A_.resize( size);
-    }
-*/
     Alocal_.resize( localm_ * n_); 
     R_.resize( n_ * n_);
     tmp_.resize(input_panel_size_*input_panel_size_);
     Wtmp_.resize(localm_* (n_ -input_panel_size_));
-
-
 }
 
 
@@ -206,58 +197,25 @@ void cqr::gschol::gramMatrix(double *A, double *tmp)
     std::int64_t ldi = n_, ldr = n_;
     
     timing->start_timing("computation");
-    /*
-    CUBLAS_CHECK(cublasDsyrk(cublashandle_,
-                             CUBLAS_FILL_MODE_LOWER,
-                             CUBLAS_OP_N,
-                             n, k,
-                             &alpha,
-                             A, lda,
-                             &beta,
-                             tmp, ldtmp));
-*/
     dsyrk("L", "N",
           &n, &k,
           &alpha,
           A, &lda,
           &beta,
           tmp, &ldtmp);
-
     timing->stop_timing("computation");
 
     timing->start_timing("communication");
-    #ifdef NCCL
-        NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
-    #else
-        MPI_Allreduce(MPI_IN_PLACE, tmp, panel_size_ * panel_size_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    #endif
+    MPI_Allreduce(MPI_IN_PLACE, tmp, panel_size_ * panel_size_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     timing->stop_timing("communication");
 }
 
 
 void cqr::gschol::cholesky(double *B)
 {
-    
-    //size_t d_lwork = 0;     
-    //size_t h_lwork = 0;     
-
     std::int64_t n = panel_size_, lda = panel_size_;
-    
     timing->start_timing("computation");
-    /*
-    CUSOLVER_CHECK(cusolverDnXpotrf_bufferSize(
-        cusolverhandle_, NULL, CUBLAS_FILL_MODE_LOWER, n, CUDA_R_64F, B, lda,
-        CUDA_R_64F, &d_lwork, &h_lwork));
 
-    // Allocate buffer for holding scratchpad memory to be used by the routine 
-    // for storing intermediate results
-    cudamemory<double> d_work(d_lwork);    
-    cudamemory<int> d_info(1);
-
-    CUSOLVER_CHECK(cusolverDnXpotrf(cusolverhandle_, NULL, CUBLAS_FILL_MODE_LOWER, n, CUDA_R_64F,
-        B, lda, CUDA_R_64F, d_work.data(), d_lwork,
-        h_work, h_lwork, d_info.data()));
-    */
     std::int64_t info = 0;
     dpotrf("L", &n, B, &lda, &info);
     timing->stop_timing("computation");
@@ -270,15 +228,6 @@ void cqr::gschol::calculateQ(double *A, double *R)
     double alpha = 1.0;
     std::int64_t ldr = panel_size_, lda = n_;
     //calculate Q by solving QR = A
-    /*
-    cublasDtrsm(cublashandle_,
-                CUBLAS_SIDE_LEFT,
-                CUBLAS_FILL_MODE_LOWER,
-                CUBLAS_OP_N,
-                CUBLAS_DIAG_NON_UNIT,
-                panel_size_, localm_, &alpha, R, ldr, A, lda);
-    */
-
     dtrsm("L", "L", "N", "N",
           &panel_size_, &localm_, &alpha, R, &ldr, A, &lda);
     timing->stop_timing("computation");
@@ -288,7 +237,6 @@ void cqr::gschol::calculateQ(double *A, double *R)
 void cqr::gschol::save_R(double* R, std::int64_t ldr, double* tmp, std::int64_t ldtmp, std::int64_t m, std::int64_t n)
 {
     timing->start_timing("computation");
-    //cudaMemcpy2D(R, sizeof(double) * ldr, tmp, sizeof(double) * ldtmp, sizeof(double) * n, m, cudaMemcpyDeviceToDevice);
     dlacpy("N", &n, &m, tmp, &ldtmp, R, &ldr );
     timing->stop_timing("computation");
 }
@@ -297,16 +245,7 @@ void cqr::gschol::multiply_R(double *R, double *tmp)
 {
     double alpha = 1.0;
     timing->start_timing("computation");
-    /*
-    CUBLAS_CHECK(cublasDtrmm(cublashandle_,
-                            CUBLAS_SIDE_LEFT, CUBLAS_FILL_MODE_LOWER,
-                            CUBLAS_OP_N, CUBLAS_DIAG_NON_UNIT,
-                            panel_size_, panel_size_,
-                            &alpha,
-                            R, n_,
-                            tmp, panel_size_,
-                            R, n_));
-*/
+
     dtrmm("R", "L", "N", "N", 
           &panel_size_, &panel_size_,
           &alpha,
@@ -325,16 +264,7 @@ void cqr::gschol::reothrogonalize_panel(std::vector<double> &A, int panel_number
 
     // W = Qj^T @ Ar
     timing->start_timing("computation");
-    /*
-    CUBLAS_CHECK(cublasDgemm(cublashandle_,
-                             CUBLAS_OP_N, CUBLAS_OP_T,
-                             panel_size_, panel_number * input_panel_size_, localm_,
-                             &alpha,
-                             A.data() + panel_number * input_panel_size_, lda,
-                             A.data(), lda,
-                             &beta,
-                             cudaWtmp_.data(), panel_size_));
-    */
+
     dgemm("N", "T",
           &panel_size_, &n, &localm_,
           &alpha,
@@ -346,27 +276,14 @@ void cqr::gschol::reothrogonalize_panel(std::vector<double> &A, int panel_number
     timing->stop_timing("computation");
     
     timing->start_timing("communication");
-    #ifdef NCCL
-        //NCCLCHECK(ncclAllReduce(cudaWtmp_.data(), cudaWtmp_.data(), panel_number * input_panel_size_ * panel_size_, ncclDouble, ncclSum,  nccl_comm_, 0));
-    #else
-        MPI_Allreduce(MPI_IN_PLACE, Wtmp_.data(), panel_number * input_panel_size_ * panel_size_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
-    #endif
+    MPI_Allreduce(MPI_IN_PLACE, Wtmp_.data(), panel_number * input_panel_size_ * panel_size_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
     timing->stop_timing("communication");
 
     alpha = -1.0;
     beta = 1.0;
 
     timing->start_timing("computation");
-    /*
-    CUBLAS_CHECK(cublasDgemm(cublashandle_,
-                             CUBLAS_OP_N, CUBLAS_OP_N,
-                             panel_size_, localm_, panel_number * input_panel_size_,
-                             &alpha,
-                             cudaWtmp_.data(), panel_size_,
-                             A.data(), lda,
-                             &beta,
-                             A.data() + panel_number * input_panel_size_, lda));
-    */
+
     dgemm("N", "N",
           &panel_size_, &localm_, &n,
           &alpha,
@@ -388,16 +305,6 @@ void cqr::gschol::update_rest_Matrix(std::vector<double> &A, int panel_number)
 
     // W = Qj^T @ Ar
     timing->start_timing("computation");
-    /*
-    CUBLAS_CHECK(cublasDgemm(cublashandle_,
-                             CUBLAS_OP_N, CUBLAS_OP_T,
-                             n_ - panel_number * input_panel_size_, input_panel_size_, localm_,
-                             &alpha,
-                             A.data() + panel_number * input_panel_size_, lda,
-                             A.data() + (panel_number -1) * input_panel_size_, lda,
-                             &beta,
-                             cudaWtmp_.data(), ldw));
-    */
     dgemm("N", "T", 
           &m, &input_panel_size_, &localm_, 
           &alpha, 
@@ -408,27 +315,13 @@ void cqr::gschol::update_rest_Matrix(std::vector<double> &A, int panel_number)
     timing->stop_timing("computation");
     
     timing->start_timing("communication");
-    #ifdef NCCL
-        //NCCLCHECK(ncclAllReduce(cudaWtmp_.data(), cudaWtmp_.data(), ldw * input_panel_size_, ncclDouble, ncclSum,  nccl_comm_, 0));
-    #else
-        MPI_Allreduce(MPI_IN_PLACE, Wtmp_.data(), ldw * input_panel_size_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
-    #endif
+    MPI_Allreduce(MPI_IN_PLACE, Wtmp_.data(), ldw * input_panel_size_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
     timing->stop_timing("communication");
 
     alpha = -1.0;
     beta = 1.0;
 
     timing->start_timing("computation");
-    /*
-    CUBLAS_CHECK(cublasDgemm(cublashandle_,
-                             CUBLAS_OP_N, CUBLAS_OP_N,
-                             n_ - panel_number * input_panel_size_, localm_, input_panel_size_,
-                             &alpha,
-                             cudaWtmp_.data(), ldw,
-                             A.data() + (panel_number -1) * input_panel_size_, lda,
-                             &beta,
-                             A.data() + panel_number * input_panel_size_, lda));
-    */
     dgemm("N", "N",
           &m, &localm_, &input_panel_size_, 
           &alpha, 
@@ -442,12 +335,7 @@ void cqr::gschol::update_rest_Matrix(std::vector<double> &A, int panel_number)
 
 void cqr::gschol::MPI_Warmup()
 {
-#ifdef GPU
-    MPI_Allreduce(MPI_IN_PLACE, R.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
-
-#else
-    //MPI_Allreduce(MPI_IN_PLACE, cudaWtmp1_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
-#endif
+    MPI_Allreduce(MPI_IN_PLACE, R_.data(), n_ * n_, MPI_DOUBLE, MPI_SUM, mpi_comm_);
 }
 
 void cqr::gschol::savematrix(const char *filename, std::vector<double> &vec)
