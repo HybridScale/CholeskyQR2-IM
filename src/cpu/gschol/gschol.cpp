@@ -1,5 +1,6 @@
 #include <string>
 #include <fstream>
+#include <cstring>
 
 #include "gschol.hpp"
 
