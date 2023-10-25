@@ -53,6 +53,7 @@ cqr::gschol::gschol(std::int64_t m, std::int64_t n, std::int64_t panel_size) :
 
     //cudatmp_.resize(input_panel_size_*input_panel_size_);
     cudatmp_.resize(input_panel_size_*input_panel_size_);
+    cudatmp2_.resize(input_panel_size_*input_panel_size_);
     cudatmp_.memset(0);
     cudaWtmp_.resize(localm_* (n_ -input_panel_size_));
     cudaWtmp_.memset(0);
@@ -163,12 +164,12 @@ void cqr::gschol::Start()
                 counts.data(),
                 displacements.data(), 
                 distmatrix->get_datatype(), 0, mpi_comm_);
-    */  
+    */ 
     validate = std::make_unique<Validate>(localm_, n_,
                                             cudaAlocal_.data(), 
                                             cudaR_.data(),
                                             filename_.data(),
-                                            cublashandle_);
+                                            cublashandle_);    
     orthogonality_ = validate->orthogonality();
     cudamemory<double> A(localm_ * n_);
     InputMatrix(A);
@@ -368,7 +369,9 @@ void cqr::gschol::multiply_R(double *R, double *tmp)
                             &alpha,
                             R, n_,
                             tmp, panel_size_,
-                            R, n_));
+                            cudatmp2_.data(), panel_size_));
+    save_R(R, n_, cudatmp2_.data(), panel_size_, panel_size_, panel_size_);
+
     timing->stop_timing("computation");
 
 

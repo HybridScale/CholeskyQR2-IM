@@ -73,7 +73,7 @@ namespace cqr
         cudamemory<double> cudaAlocal_;
         cudamemory<double> cudaR_, cudaR1_, cudaR2_;
         cudamemory<double> cudaI_;
-        cudamemory<double> cudatmp_, cudaWtmp_;
+        cudamemory<double> cudatmp_, cudatmp2_, cudaWtmp_;
 #endif       
         std::unique_ptr<DistributedMatrix> distmatrix;
         std::unique_ptr<Validate> validate;
