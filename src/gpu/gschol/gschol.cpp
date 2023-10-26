@@ -209,7 +209,6 @@ void cqr::gschol::gschol2(cudamemory<double> &A, cudamemory<double> &R)
             cudatmp_.memset();
             NvtxTracer T("gram");
             gramMatrix(A.data() + j*input_panel_size_, 
-                       cudaR_.data() + j*input_panel_size_*n_ + j*input_panel_size_,
                        cudatmp_.data());
             cholesky(cudatmp_.data());
             calculateQ(A.data() + j*input_panel_size_, 
@@ -228,7 +227,6 @@ void cqr::gschol::gschol2(cudamemory<double> &A, cudamemory<double> &R)
             cudatmp_.memset();
             NvtxTracer T("gram");
             gramMatrix(A.data() + j*input_panel_size_, 
-                       cudaR2_.data() + j*input_panel_size_*n_ + j*input_panel_size_,
                        cudatmp_.data());
             cholesky(cudatmp_.data());
             calculateQ(A.data() + j*input_panel_size_, 
@@ -245,7 +243,6 @@ void cqr::gschol::first_panel_orth()
         cudatmp_.memset();
         NvtxTracer T("choleksy1");
         gramMatrix(cudaAlocal_.data(), 
-                   cudaR_.data(),
                    cudatmp_.data());
         cholesky(cudatmp_.data());
         calculateQ(cudaAlocal_.data(), 
@@ -256,7 +253,6 @@ void cqr::gschol::first_panel_orth()
         cudatmp_.memset();
         NvtxTracer T("choleksy2");
         gramMatrix(cudaAlocal_.data(), 
-                   cudaR2_.data(),
                    cudatmp_.data());
 
         cholesky(cudatmp_.data());
@@ -266,7 +262,7 @@ void cqr::gschol::first_panel_orth()
     }
 }
 
-void cqr::gschol::gramMatrix(double *A, double *R, double *tmp) 
+void cqr::gschol::gramMatrix(double *A, double *tmp) 
 {
     // Calculating partial gram matrix to tmp device memory 
     // Sumation of all partial gramm matrix with mpi/nccl allreduce call
@@ -351,7 +347,7 @@ void cqr::gschol::calculateQ(double *A, double *R)
 }
 
 
-void cqr::gschol::save_R(double* R, std::size_t ldr, double* tmp, std::size_t ldtmp, int m, int n)
+void cqr::gschol::save_R(double* R, std::int64_t ldr, double* tmp, std::int64_t ldtmp, std::int64_t m, std::int64_t n)
 {
     timing->start_timing("computation");
     cudaMemcpy2D(R, sizeof(double) * ldr, tmp, sizeof(double) * ldtmp, sizeof(double) * n, m, cudaMemcpyDeviceToDevice);

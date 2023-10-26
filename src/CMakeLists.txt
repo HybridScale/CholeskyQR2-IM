@@ -1,6 +1,7 @@
 
 add_subdirectory("distributedmatrix")
 add_subdirectory("cpu/validate")
+add_subdirectory("cpu/gschol")
 
 #add_subdirectory("cpu/cqr2bgs")
 #add_subdirectory("cpu/cqr2bgslookahead")
