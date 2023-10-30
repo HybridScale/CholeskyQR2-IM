@@ -55,7 +55,7 @@ cqr::gschol::gschol(std::int64_t m, std::int64_t n, std::int64_t panel_size) :
     cudatmp_.resize(input_panel_size_*input_panel_size_);
     cudatmp2_.resize(input_panel_size_*input_panel_size_);
     cudatmp_.memset(0);
-    cudaWtmp_.resize(localm_* (n_ -input_panel_size_));
+    cudaWtmp_.resize(input_panel_size_* (n_ -input_panel_size_));
     cudaWtmp_.memset(0);
 
 }
