@@ -1,3 +1,17 @@
+/*
+ * File:   gschol.hpp
+ * Date:   July 7, 2023
+ * Brief:  Definition of the class for the modified CholeskyQR2 with modified block Gram-Schmidt reorthogonalization algorithm.
+ * 
+ * This file is part of the CholeskyQR2++ library.
+ * 
+ * Copyright (c) 2023-2024 Centre for Informatics and Computing,
+ * Rudjer Boskovic Institute, Croatia. All rights reserved.
+ * 
+ * License: 3-clause BSD (BSD License 2.0)
+ */
+
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -64,15 +78,18 @@ namespace cqr
         void savematrix(const char* filename, std::vector<double> &vec);
         void vector_memset_zero(std::vector<double> &vec);
 
-        std::int64_t n_, m_, localm_, block_size_;
-        std::int64_t input_panel_size_, panel_size_;
-        std::int64_t size = 1;
-        std::string filename_;
+        std::int64_t n_;                 // number of columns of the input matrix
+        std::int64_t m_;                 // (global) number of rows of the input matrix
+        std::int64_t localm_;            // local number of rows per MPI rank
+        std::int64_t input_panel_size_;  // panel width (number of columns in the panel)
+        std::int64_t panel_size_;        // local variable for keeping current panel size
+        std::int64_t size = 1;           // local variable, total number of elements of the input matrix (m_ * n_)
+        std::string filename_;           // name of the input file
 
-        std::vector<double> A_;
-        std::vector<double> Alocal_;
-        std::vector<double> R_;
-        std::vector<double> tmp_, Wtmp_;
+        std::vector<double> A_;          // Global array for storing input matrix
+        std::vector<double> Alocal_;     // Local array for storing a block of A (per MPI rank)
+        std::vector<double> R_;          // Local array for string R factor
+        std::vector<double> tmp_, Wtmp_; // Local workspaces
 
 
 #ifdef GPU

@@ -1,10 +1,23 @@
+/*
+ * File:   main.cpp
+ * Date:   July 7, 2023
+ * Brief:  Sample program to test various implementations of the CholeskyQR2-based QR factorization.
+ * 
+ * This file is part of the CholeskyQR2++ library.
+ * 
+ * Copyright (c) 2023-2024 Centre for Informatics and Computing,
+ * Rudjer Boskovic Institute, Croatia. All rights reserved.
+ * 
+ * License: 3-clause BSD (BSD License 2.0)
+ */
+
+
+
 #include <iostream>
 #include <iomanip>
 #include <vector>
 #include <cstdint>
 #include <boost/program_options.hpp>
-
-
 
 #ifdef GSCHOL
 #include "gschol.hpp"
@@ -40,7 +53,7 @@ int main(int argc, char** argv) {
         ("bn", value<std::int64_t>(), "Number of panels")
         ("k", value<int>(), "Exponent of scientific notation of cond number of matrix")
         ("input", value<std::string>(), "Name of input bin matrix")
-        ("validate,v", bool_switch()->default_value(false), "validation of the implementation (default: false)")
+        ("validate,v", bool_switch()->default_value(false), "validation of the obtained Q and R factors (default: false)")
         ("help,h","Print this message");
 
  
@@ -53,14 +66,12 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    //conflicting_options(vm, "b", "bn");
-
-
     // Matrix size
     std::int64_t m = vm["m"].as<std::int64_t>();
     std::int64_t n = vm["n"].as<std::int64_t>();
     std::int64_t block_size = vm["b"].as<std::int64_t>();
 
+    // Panel size and the number of panels
     std::int64_t panel_size;
     if(!vm.count("b") && !vm.count("bn")) {
         std::cout << "Set either panel size 'b' or number of panels 'bn'\n";
@@ -74,8 +85,6 @@ int main(int argc, char** argv) {
     }
 
     const char* input_matrix_name_str = vm["input"].as<std::string>().c_str();
-    //bool validate = vm["validate"].as<bool>();
-    //----- cli program options -----//
 
 #ifdef LOOKAHEAD
     //same api for cpu and gpu versions

@@ -1,3 +1,18 @@
+/*
+ * File:   cqr2bgs.cpp
+ * Date:   July 7, 2023
+ * Brief:  Implementation of the CholeskyQR2 with modified block Gram-Schmidt reorthogonalization algorithm. 
+ *         GPU implementation with CUDA-aware MPI or NCCL communicators.
+ * 
+ * This file is part of the CholeskyQR2++ library.
+ * 
+ * Copyright (c) 2023-2024 Centre for Informatics and Computing,
+ * Rudjer Boskovic Institute, Croatia. All rights reserved.
+ * 
+ * License: 3-clause BSD (BSD License 2.0)
+ */
+
+
 #include "cqr2bgs.hpp"
 
 cqr::qr2bgs::qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size) : 

@@ -1,3 +1,17 @@
+/*
+ * File:   gschol.cpp
+ * Date:   July 7, 2023
+ * Brief:  Implementation of the modified CholeskyQR2 with modified block Gram-Schmidt reorthogonalization algorithm. 
+ *         GPU implementation with CUDA-aware MPI or NCCL communicators.
+ * 
+ * This file is part of the CholeskyQR2++ library.
+ * 
+ * Copyright (c) 2023-2024 Centre for Informatics and Computing,
+ * Rudjer Boskovic Institute, Croatia. All rights reserved.
+ * 
+ * License: 3-clause BSD (BSD License 2.0)
+ */
+
 #include <string>
 
 #include "gschol.hpp"
@@ -297,7 +311,7 @@ void cqr::gschol::gramMatrix(double *A, double *tmp)
 
     timing->start_timing("communication");
     #ifdef NCCL
-        NCCLCHECK(ncclAllReduce(tmp, tmp, n*n, ncclDouble, ncclSum, nccl_comm_, 0));
+        NCCLCHECK(ncclAllReduce(tmp, tmp, panel_size_ * panel_size_, ncclDouble, ncclSum, nccl_comm_, 0));
     #else
         MPI_Allreduce(MPI_IN_PLACE, tmp, panel_size_ * panel_size_, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     #endif
