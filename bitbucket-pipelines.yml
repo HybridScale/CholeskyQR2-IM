@@ -1,0 +1,13 @@
+pipelines:
+  default:
+    - step:
+        name: 'Mirror to GitHub repo...'
+        image: alpine/git:latest
+        clone:
+          enabled: false
+        deployment: github-sync
+        script:
+          - git clone --branch="main" --bare git@bitbucket.org:davordavidovic/cholesky_qrbgs.git
+          - cd cholesky_qrbgs.git
+          - git config push.default upstream
+          - git push git@github.com:HybridScale/CholeskyQR2-IM.git master
