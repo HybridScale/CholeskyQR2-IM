@@ -8,11 +8,11 @@ The library is specifically designed for QR factorisation of large tall-and-skin
 
 ## Algorithmic variants
 
-1. **cqr2**: This version integrates the CholeskyQR algorithm with a modified Gram-Schmidt (MGS) process, which orthogonalizes the columns to the right of the current panel. The CholeskyQR with MGS is performed twice (CholeskyQR2) to enhance orthogonality. In cases of extremely ill-conditioned matrices, increasing the number of panels is necessary (refer to the [paper]()).
+1. **cqr2**: This version integrates the CholeskyQR algorithm with a modified Gram-Schmidt (MGS) process, which orthogonalizes the columns to the right of the current panel. The CholeskyQR with MGS is performed twice (CholeskyQR2) to enhance orthogonality. In cases of extremely ill-conditioned matrices (*cond(A)>10^8*), increasing the number of panels is necessary (refer to the [paper]()).
 
 2. **scqr3**: This version adopts the shifting technique instead of MGS to enhance numerical stability. The code is based on the work of [Fukaya et al.](https://epubs.siam.org/doi/abs/10.1137/18M1218212).The shifted CholeskyQR initially serves as a preconditioner for CholeskyQR2, necessitating three repetitions of CholeskyQR. Due to the increased number of floating-point operations (flops), this version proves to be the slowest approach in our benchmarks compared to the other two variants.
 
-3. **gschol**: This version is the refinement of the **cqr2** variant. Instead of applying CholeskyQR twice, where the first factor Q may not be fully orthogonal, each panel in this version udergoes complete orthogonalization before applying MGS to subsequent panels to the right. In our benchmarks, this variant demostrated to be the fastest. 
+3. **gschol**: This version is the refinement of the **cqr2** variant. Instead of applying CholeskyQR twice, where the first factor Q may not be fully orthogonal, each panel in this version undergoes complete orthogonalization before applying MGS to subsequent panels to the right. In our benchmarks, this variant demostrated to be the fastest and numerically stable for matrices with condition number up to 10^15.
 
 ## Quick start
 
@@ -22,13 +22,14 @@ Dependencies:
 
 * C++ compiler
 * CMake
-* Boost (with included program options)
+* Boost (program options)
 * CUDA Toolkit (CuBLAS, CuSolver)
 * BLAS library
 * MPI (CUDA-aware) 
 * NCCL (optional)
 
 On the supercomputer Supek at the University Computing Centre, University of Zagreb, the CholeskyQR2++ library was compiled with the following dependencies:
+
 - gcc@11.2.0
 - CMake@3.22.2
 - Boost@1.78.0
@@ -62,10 +63,10 @@ Below are the examples on how to compile the library with specific supports:
 ``` 
 
 - **CPU-only with MPI**
-
 ```bash
  cmake -B build -DUSE_GPU=0 && cmake --build build
 ``` 
+
 *NOTE: Currently, only the **gschol** algorithmic variant is available in the CPU-only mode*
 
 Upon successful completion (using the default compilation options), the following tester executables will be available in the build directory:
@@ -77,11 +78,10 @@ Upon successful completion (using the default compilation options), the followin
 | scqr3_gpu               | gpu           | MPI          | no         |
 | gschol_gpu              | gpu           | MPI          | no         |
 | gschol_cpu              | cpu           | MPI          | no         |
-| cqr2_gpu_nccl           | gpu           | NCCL         | no         |     
-| cqr2_gpu_nccl           | gpu           | NCCL         | no         |     
+| cqr2_gpu_nccl           | gpu           | NCCL         | no         |
 | cqr2_gpu_lookahead_nccl | gpu           | NCCL         | yes        |
-| scqr3_gpu_nccl          | gpu           | MPI          | no         |
-| gschol_gpu_nccl         | gpu           | MPI          | no         |  
+| scqr3_gpu_nccl          | gpu           | NCCL         | no         |
+| gschol_gpu_nccl         | gpu           | NCCL         | no         |
 
 ### Usage
 
@@ -95,22 +95,6 @@ The following code block illustrates an example with easily explained options:
 
 ```bash
 ./<executable> --m <number of rows> --n <number of columns> --b <panel size> --input <path-to-matrix>
-```
-
-### Benchmarks
-
-Benchmarking can be done with [JUBE](https://apps.fz-juelich.de/jsc/jube/jube2/docu/introduction.html). `JUBE` xml scripts are prepared inside [benchmark](benchmarks) folder for Supek (`supek.xml`) and Vega (`vega.xml`) systems.
-
-Start benchmarks with command
-
-```bash
-jube run <system>.xml
-```
-
-Executed benchmarks are stored in the `benchmarks/<system>_test` folder, where `<system>` stands for `supek` or `vega`. To report a benchmark, run the following command, where `<id>` is the benchmark id or omit it to report the last benchmark:
-
-```bash
-jube result -a <system>_test -i <id>
 ```
 
 ## Acknowledgments
