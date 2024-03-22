@@ -1,3 +1,17 @@
+/*
+ * File:   cqr2bgs.hpp
+ * Date:   July 7, 2023
+ * Brief:  Definition of the class for CholeskyQR2 with modified block Gram-Schmidt reorthogonalization algorithm.
+ * 
+ * This file is part of the CholeskyQR2++ library.
+ * 
+ * Copyright (c) 2023-2024 Centre for Informatics and Computing,
+ * Rudjer Boskovic Institute, Croatia. All rights reserved.
+ * 
+ * License: 3-clause BSD (BSD License 2.0)
+ */
+
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -27,10 +41,11 @@ namespace cqr
 
     class qr2bgs{
     public:
-        qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size);
-        qr2bgs(std::int64_t m, std::int64_t n, std::size_t panel_num);
+        qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size, bool toValidate);
+        qr2bgs(std::int64_t m, std::int64_t n, std::size_t panel_num, bool toValidate);
         ~qr2bgs();
 
+        /* Routines to read input matrix */
         void InputMatrix(cudamemory<double> &A);
         void InputMatrix(double *A);
         void InputMatrix(std::string filename);
@@ -53,14 +68,18 @@ namespace cqr
         void updateMatrix(int n, int ldw, double *A, double *R);
         float get_time();
 
-        std::int64_t n_, m_, localm_, block_size_;
-        std::int64_t input_panel_size_, panel_size_;
-        std::int64_t size = 1;
-        std::string filename_;
+        std::int64_t n_;                 // number of columns of the input matrix
+        std::int64_t m_;                 // (global) number of rows of the input matrix
+        std::int64_t localm_;            // local number of rows per MPI rank
+        std::int64_t input_panel_size_;  // panel width (number of columns in the panel)
+        std::int64_t panel_size_;        // local variable for keeping current panel size
+        std::int64_t size = 1;           // local variable, total number of elements of the input matrix (m_ * n_)
+        std::string filename_;           // name of the input file
+        bool toValidate_ = false;        // validate orthogonality and residual
 
-        std::vector<double> A_;
-        std::vector<double> Alocal_;
-        std::vector<double> R_;
+        std::vector<double> A_;          // Global array for storing input matrix
+        std::vector<double> Alocal_;     // Local array for storing a block of A (per MPI rank)
+        std::vector<double> R_;          // Local array for string R factor
 
 #ifdef GPU
         cudamemory<double> cudaAlocal_;

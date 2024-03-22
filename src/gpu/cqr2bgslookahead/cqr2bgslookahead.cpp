@@ -1,7 +1,21 @@
+/*
+ * File:   cqr2bgslookahead.cpp
+ * Date:   July 7, 2023
+ * Brief:  Implementation of the CholeskyQR2 with modified block Gram-Schmidt reorthogonalization algorithm,
+ *         including lookahead optimization. GPU implementation with CUDA-aware MPI or NCCL communicators.
+ * 
+ * This file is part of the CholeskyQR2++ library.
+ * 
+ * Copyright (c) 2023-2024 Centre for Informatics and Computing,
+ * Rudjer Boskovic Institute, Croatia. All rights reserved.
+ * 
+ * License: 3-clause BSD (BSD License 2.0)
+ */
+
 #include "cqr2bgslookahead.hpp"
 
-cqr::qr2bgsloohahead::qr2bgsloohahead(std::int64_t m, std::int64_t n, std::int64_t panel_size) : 
-                                      m_(m), n_(n), input_panel_size_(panel_size)
+cqr::qr2bgsloohahead::qr2bgsloohahead(std::int64_t m, std::int64_t n, std::int64_t panel_size, bool toValidate = false) : 
+                                      m_(m), n_(n), input_panel_size_(panel_size), toValidate_(toValidate)
 {
     
     MPI_Init(NULL, NULL);
@@ -100,7 +114,7 @@ void cqr::qr2bgsloohahead::InputMatrix(cudamemory<double> &A)
     int access_mode = MPI_MODE_RDONLY; // mode for reading only
 
 
-    if(MPI_File_open(mpi_comm_, filename_, access_mode, MPI_INFO_NULL, &fileHandle) != MPI_SUCCESS)
+    if(MPI_File_open(mpi_comm_, filename_.c_str(), access_mode, MPI_INFO_NULL, &fileHandle) != MPI_SUCCESS)
     {
         std::cout << "Can't open input matrix - " << filename_ << " on rank " << world_rank_ << std::endl;
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -193,26 +207,31 @@ void cqr::qr2bgsloohahead::Start()
                 displacements.data(), 
                 distmatrix->get_datatype(), 0, mpi_comm_);
 */
-    validate = std::make_unique<Validate>(localm_, n_,
-                                          cudaAlocal_.data(), 
-                                          cudaR_.data(),
-                                          filename_,
-                                          cublashandle_);
-/*
-        cudaR_.copytohost(R_);
-        validate = std::make_unique<Validate>(m_, n_,
-                                                 A_.data(), 
-                                                 R_.data(),
-                                                 filename_);
-*/
-    orthogonality_ = validate->orthogonality();
-    cudamemory<double> A(localm_ * n_);
-    InputMatrix(A);
-    residuals_     = validate->residuals(A);
-    if( world_rank_ == 0)
-    {  
-        std::cout << "orthogonality: " << orthogonality_ << std::endl;
-        std::cout << "residuals: "     << residuals_     << std::endl;
+    if(toValidate_) {
+        validate = std::make_unique<Validate>(localm_, n_,
+                                              cudaAlocal_.data(), 
+                                              cudaR_.data(),
+                                              filename_.c_str(),
+                                              cublashandle_);
+/*  
+            cudaR_.copytohost(R_);
+            validate = std::make_unique<Validate>(m_, n_,
+                                                     A_.data(), 
+                                                     R_.data(),
+                                                     filename_);
+*/  
+        orthogonality_ = validate->orthogonality();
+        cudamemory<double> A(localm_ * n_);
+        InputMatrix(A);
+        residuals_     = validate->residuals(A);
+        if( world_rank_ == 0)
+        {  
+            std::cout << "orthogonality: " << orthogonality_ << std::endl;
+            std::cout << "residuals: "     << residuals_     << std::endl;
+        }
+    }
+
+    if( world_rank_ == 0) {
         timing->print();
     }
 

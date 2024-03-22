@@ -1,6 +1,19 @@
+/*
+ * File:   validate_gpu.hpp
+ * Date:   July 7, 2023
+ * Brief:  Definition of validation functions for GPU. Computes the residual and orthogonality of the obtained factors Q and R.
+ * 
+ * This file is part of the CholeskyQR2++ library.
+ * 
+ * Copyright (c) 2023-2024 Centre for Informatics and Computing,
+ * Rudjer Boskovic Institute, Croatia. All rights reserved.
+ * 
+ * License: 3-clause BSD (BSD License 2.0)
+ */
+
+
 #include <cstdint>
 #include <vector>
-
 
 #include <cublas_v2.h>
 #include <cuda_runtime.h>

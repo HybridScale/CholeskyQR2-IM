@@ -1,3 +1,17 @@
+/*
+ * File:   scqr3.hpp
+ * Date:   July 7, 2023
+ * Brief:  Definition of the class for the shifted CholeskyQR3 algorithm.
+ * 
+ * This file is part of the CholeskyQR2++ library.
+ * 
+ * Copyright (c) 2023-2024 Centre for Informatics and Computing,
+ * Rudjer Boskovic Institute, Croatia. All rights reserved.
+ * 
+ * License: 3-clause BSD (BSD License 2.0)
+ */
+
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -27,7 +41,7 @@ namespace cqr
 
     class qr3{
     public:
-        qr3(std::int64_t m, std::int64_t n);
+        qr3(std::int64_t m, std::int64_t n, bool toValidate);
         ~qr3();
 
         void InputMatrix(cudamemory<double> &A);
@@ -62,6 +76,7 @@ namespace cqr
         std::int64_t input_panel_size_, panel_size_;
         std::int64_t size = 1;
         std::string filename_;
+        bool toValidate_ = false;        // validate orthogonality and residual
 
         std::vector<double> A_;
         std::vector<double> Alocal_;
