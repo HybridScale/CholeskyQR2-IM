@@ -41,7 +41,7 @@ namespace cqr
 
     class qr3{
     public:
-        qr3(std::int64_t m, std::int64_t n);
+        qr3(std::int64_t m, std::int64_t n, bool toValidate);
         ~qr3();
 
         void InputMatrix(cudamemory<double> &A);
@@ -76,6 +76,7 @@ namespace cqr
         std::int64_t input_panel_size_, panel_size_;
         std::int64_t size = 1;
         std::string filename_;
+        bool toValidate_ = false;        // validate orthogonality and residual
 
         std::vector<double> A_;
         std::vector<double> Alocal_;

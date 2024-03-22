@@ -16,8 +16,8 @@
 
 #include "gschol.hpp"
 
-cqr::gschol::gschol(std::int64_t m, std::int64_t n, std::int64_t panel_size) : 
-                 m_(m), n_(n), input_panel_size_(panel_size)
+cqr::gschol::gschol(std::int64_t m, std::int64_t n, std::int64_t panel_size, bool toValidate = false) : 
+                 m_(m), n_(n), input_panel_size_(panel_size), toValidate_(toValidate)
 {
     MPI_Init(NULL, NULL);
 
@@ -179,19 +179,24 @@ void cqr::gschol::Start()
                 displacements.data(), 
                 distmatrix->get_datatype(), 0, mpi_comm_);
     */ 
-    validate = std::make_unique<Validate>(localm_, n_,
-                                            cudaAlocal_.data(), 
-                                            cudaR_.data(),
-                                            filename_.data(),
-                                            cublashandle_);    
-    orthogonality_ = validate->orthogonality();
-    cudamemory<double> A(localm_ * n_);
-    InputMatrix(A);
-    residuals_     = validate->residuals(A);
-    if( world_rank_ == 0)
-    {
-        std::cout << "orthogonality: " << orthogonality_ << std::endl;
-        std::cout << "residuals: "     << residuals_     << std::endl;
+    if( toValidate_ ) {
+        validate = std::make_unique<Validate>(localm_, n_,
+                                                cudaAlocal_.data(), 
+                                                cudaR_.data(),
+                                                filename_.data(),
+                                                cublashandle_);    
+        orthogonality_ = validate->orthogonality();
+        cudamemory<double> A(localm_ * n_);
+        InputMatrix(A);
+        residuals_     = validate->residuals(A);
+        if( world_rank_ == 0)
+        {
+            std::cout << "orthogonality: " << orthogonality_ << std::endl;
+            std::cout << "residuals: "     << residuals_     << std::endl;
+        }
+    }
+
+    if( world_rank_ == 0) {
         timing->print();
     }
 }

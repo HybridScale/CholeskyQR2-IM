@@ -50,7 +50,6 @@ int main(int argc, char** argv) {
         ("m", value<std::int64_t>()->default_value(10000), "Number of rows (default: 10000")
         ("n", value<std::int64_t>()->default_value(1000), "Number of columns (default: 1000")
         ("b", value<std::int64_t>()->default_value(50), "Panel size (default: 50)")
-        ("bn", value<std::int64_t>(), "Number of panels")
         ("k", value<int>(), "Exponent of scientific notation of cond number of matrix")
         ("input", value<std::string>(), "Path to the file with the matrix in binary format.")
         ("validate,v", bool_switch()->default_value(false), "Validation of the obtained Q and R factors (default: false)")
@@ -69,32 +68,27 @@ int main(int argc, char** argv) {
     // Matrix size
     std::int64_t m = vm["m"].as<std::int64_t>();
     std::int64_t n = vm["n"].as<std::int64_t>();
-    std::int64_t block_size = vm["b"].as<std::int64_t>();
+    std::int64_t panel_size = vm["b"].as<std::int64_t>();
 
-    // Panel size and the number of panels
-    std::int64_t panel_size;
-    if(!vm.count("b") && !vm.count("bn")) {
-        std::cout << "Set either panel size 'b' or number of panels 'bn'\n";
-        exit(1);
-    }
-    else if(vm.count("b")) {
-        panel_size = vm["b"].as<std::int64_t>();
-    }
-    else {
-        panel_size = ceil((double)n / vm["bn"].as<std::int64_t>());
+    // Panel size cannot be larger than the number of columns
+    if( panel_size > n ) {
+        panel_size = n;
     }
 
     const char* input_matrix_name_str = vm["input"].as<std::string>().c_str();
 
+    // Validate flag
+    const bool validate = vm["validate"].as<bool>();
+
 #ifdef LOOKAHEAD
     //same api for cpu and gpu versions
-    cqr::qr2bgsloohahead algorithm(m, n, block_size);
+    cqr::qr2bgsloohahead algorithm(m, n, panel_size, validate);
 #elif SHIFT
-    cqr::qr3 algorithm(m, n);
+    cqr::qr3 algorithm(m, n, validate);
 #elif GSCHOL
-    cqr::gschol algorithm(m, n, block_size);
+    cqr::gschol algorithm(m, n, panel_size, validate);
 #else 
-    cqr::qr2bgs algorithm(m, n, block_size);
+    cqr::qr2bgs algorithm(m, n, panel_size, validate);
 #endif
     algorithm.InputMatrix(input_matrix_name_str);
     algorithm.Start();

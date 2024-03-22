@@ -14,8 +14,8 @@
 
 #include "scqr3.hpp"
 
-cqr::qr3::qr3(std::int64_t m, std::int64_t n) : 
-                 m_(m), n_(n)
+cqr::qr3::qr3(std::int64_t m, std::int64_t n, bool toValidate = false) : 
+                 m_(m), n_(n), toValidate_(toValidate)
 {
     MPI_Init(NULL, NULL);
 
@@ -157,20 +157,25 @@ void cqr::qr3::Start()
     std::vector<int> displacements = distmatrix->get_displacements();
     std::vector<int> counts = distmatrix->get_counts();
  
-    validate = std::make_unique<Validate>(localm_, n_,
-                                            cudaAlocal_.data(), 
-                                            cudaR_.data(),
-                                            filename_.data(),
-                                            cublashandle_);
-    orthogonality_ = validate->orthogonality();
-    cudamemory<double> A(localm_ * n_);
-    InputMatrix(A);
-    residuals_     = validate->residuals(A);
+    if( toValidate_ ) {
+        validate = std::make_unique<Validate>(localm_, n_,
+                                                cudaAlocal_.data(), 
+                                                cudaR_.data(),
+                                                filename_.data(),
+                                                cublashandle_);
+        orthogonality_ = validate->orthogonality();
+        cudamemory<double> A(localm_ * n_);
+        InputMatrix(A);
+        residuals_     = validate->residuals(A);
 
-    if( world_rank_ == 0)
-    {  
-        std::cout << "orthogonality: " << orthogonality_ << std::endl;
-        std::cout << "residuals: "     << residuals_     << std::endl;
+        if( world_rank_ == 0)
+        {  
+            std::cout << "orthogonality: " << orthogonality_ << std::endl;
+            std::cout << "residuals: "     << residuals_     << std::endl;
+        }
+    }
+
+    if( world_rank_ == 0) {
         timing->print();
     }
 

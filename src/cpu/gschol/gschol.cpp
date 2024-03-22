@@ -18,8 +18,8 @@
 
 #include "gschol.hpp"
 
-cqr::gschol::gschol(std::int64_t m, std::int64_t n, std::int64_t panel_size) : 
-                 m_(m), n_(n), input_panel_size_(panel_size)
+cqr::gschol::gschol(std::int64_t m, std::int64_t n, std::int64_t panel_size, bool toValidate = false): 
+                 m_(m), n_(n), input_panel_size_(panel_size), toValidate_(toValidate)
 {
     MPI_Init(NULL, NULL);
 
@@ -122,21 +122,26 @@ void cqr::gschol::Start()
     std::vector<int> displacements = distmatrix->get_displacements();
     std::vector<int> counts = distmatrix->get_counts();
 
-    validate = std::make_unique<Validate>(localm_, n_,
-                                          Alocal_.data(), 
-                                          R_.data(),
-                                          filename_.data());
-    orthogonality_ = validate->orthogonality();
-    std::vector<double> A(localm_ * n_);
-    InputMatrix(A.data());
-    residuals_     = validate->residuals(A);
-    //residuals_     = validate->residuals();
-    if( world_rank_ == 0)
-    {
-        std::cout << "orthogonality: " << orthogonality_ << std::endl;
-        std::cout << "residuals: "     << residuals_     << std::endl;
-        timing->print();
+    if( toValidate_ ) {
+        validate = std::make_unique<Validate>(localm_, n_,
+                                              Alocal_.data(), 
+                                              R_.data(),
+                                              filename_.data());
+        orthogonality_ = validate->orthogonality();
+        std::vector<double> A(localm_ * n_);
+        InputMatrix(A.data());
+        residuals_     = validate->residuals(A);
+
+        if( world_rank_ == 0)
+        {
+            std::cout << "orthogonality: " << orthogonality_ << std::endl;
+            std::cout << "residuals: "     << residuals_     << std::endl;
+        }
     }
+
+    if( world_rank_ == 0) {
+        timing->print();
+    }    
 }
 
 

@@ -41,8 +41,8 @@ namespace cqr
 
     class qr2bgs{
     public:
-        qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size);
-        qr2bgs(std::int64_t m, std::int64_t n, std::size_t panel_num);
+        qr2bgs(std::int64_t m, std::int64_t n, std::int64_t panel_size, bool toValidate);
+        qr2bgs(std::int64_t m, std::int64_t n, std::size_t panel_num, bool toValidate);
         ~qr2bgs();
 
         /* Routines to read input matrix */
@@ -75,6 +75,7 @@ namespace cqr
         std::int64_t panel_size_;        // local variable for keeping current panel size
         std::int64_t size = 1;           // local variable, total number of elements of the input matrix (m_ * n_)
         std::string filename_;           // name of the input file
+        bool toValidate_ = false;        // validate orthogonality and residual
 
         std::vector<double> A_;          // Global array for storing input matrix
         std::vector<double> Alocal_;     // Local array for storing a block of A (per MPI rank)
