@@ -52,8 +52,8 @@ int main(int argc, char** argv) {
         ("b", value<std::int64_t>()->default_value(50), "Panel size (default: 50)")
         ("bn", value<std::int64_t>(), "Number of panels")
         ("k", value<int>(), "Exponent of scientific notation of cond number of matrix")
-        ("input", value<std::string>(), "Name of input bin matrix")
-        ("validate,v", bool_switch()->default_value(false), "validation of the obtained Q and R factors (default: false)")
+        ("input", value<std::string>(), "Path to the file with the matrix in binary format.")
+        ("validate,v", bool_switch()->default_value(false), "Validation of the obtained Q and R factors (default: false)")
         ("help,h","Print this message");
 
  
