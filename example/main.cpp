@@ -3,7 +3,7 @@
  * Date:   July 7, 2023
  * Brief:  Sample program to test various implementations of the CholeskyQR2-based QR factorization.
  * 
- * This file is part of the CholeskyQR2++ library.
+ * This file is part of the CholeskyQR2-IM library.
  * 
  * Copyright (c) 2023-2024 Centre for Informatics and Computing,
  * Rudjer Boskovic Institute, Croatia. All rights reserved.

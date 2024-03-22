@@ -4,7 +4,7 @@
  * Brief:  Implementation of the modified CholeskyQR2 with modified block Gram-Schmidt reorthogonalization algorithm. 
  *         CPU-only implementation with MPI.
  * 
- * This file is part of the CholeskyQR2++ library.
+ * This file is part of the CholeskyQR2-IM library.
  * 
  * Copyright (c) 2023-2024 Centre for Informatics and Computing,
  * Rudjer Boskovic Institute, Croatia. All rights reserved.

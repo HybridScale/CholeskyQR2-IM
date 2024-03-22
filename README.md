@@ -1,8 +1,10 @@
-# CholeskyQR2++
+![GitHub License](https://img.shields.io/github/license/HybridScale/CholeskyQR2-IM)
 
-The **CholeskyQR2++** library is a modern C++ implementation designed to compute the QR factorization of **extremely ill-conditioned tall-and-skinny** matrices. It is based on the [Cholesky QR2](https://ieeexplore.ieee.org/document/7016731) algorithm, which has been widely recognized for its performance and easy parallelization on the distributed memory systems.
+# CholeskyQR2 for ill-conditioned matrices
 
-The **CholeskyQR2++** introduces an alternative approach that combines traditional CholeskyQR2 with the **shifting** technique and the **modified Gram-Schmidt** process. The innovative approach enhances both the **numerical stability** of the algorithm and the **accuracy** of the computed factor Q.
+The **CholeskyQR2** for **I**ll-conditioned **M**atrices (**CholeskyQR2-IM**) library is a modern C++ implementation designed to compute the QR factorization of **extremely ill-conditioned tall-and-skinny** matrices. It is based on the [Cholesky QR2](https://ieeexplore.ieee.org/document/7016731) algorithm, which has been widely recognized for its performance and easy parallelization on the distributed memory systems.
+
+The **CholeskyQR2-IM** introduces an alternative approach that combines traditional CholeskyQR2 with the **shifting** technique and the **modified Gram-Schmidt** process. The innovative approach enhances both the **numerical stability** of the algorithm and the **accuracy** of the computed factor Q.
 
 The library is specifically designed for QR factorisation of large tall-and-skinny matrices on distributed memory systems, with full support for both GPUs and modern CPUs. Comprehensive insights into the novel QR algorithm as well as detailed analyses of its stability and performance can be found [here](link-to-arxiv).
 
@@ -28,7 +30,7 @@ Dependencies:
 * MPI (CUDA-aware) 
 * NCCL (optional)
 
-On the supercomputer Supek at the University Computing Centre, University of Zagreb, the CholeskyQR2++ library was compiled with the following dependencies:
+On the supercomputer Supek at the University Computing Centre, University of Zagreb, the CholeskyQR2-IM library was compiled with the following dependencies:
 
 - gcc@11.2.0
 - CMake@3.22.2
@@ -111,7 +113,7 @@ The code was developed at the [Ruđer Bošković Institute (RBI)](https://www.ir
 
 ## How to cite
 
-To cite the CholeskyQR2++ please use the following paper:
+To cite the CholeskyQR2-IM please use the following paper:
 
 - link-to-archive (to be added)
 
