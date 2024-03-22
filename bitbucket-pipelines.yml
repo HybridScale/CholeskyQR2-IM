@@ -2,10 +2,7 @@ pipelines:
   default:
     - step:
         name: 'Mirror to GitHub repo...'
-        image: alpine/git:latest
-        clone:
-          enabled: false
-        deployment: github-sync
+        deployment: production
         script:
           - git clone --branch="main" --bare git@bitbucket.org:davordavidovic/cholesky_qrbgs.git
           - cd cholesky_qrbgs.git
