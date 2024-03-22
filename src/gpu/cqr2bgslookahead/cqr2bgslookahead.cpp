@@ -114,7 +114,7 @@ void cqr::qr2bgsloohahead::InputMatrix(cudamemory<double> &A)
     int access_mode = MPI_MODE_RDONLY; // mode for reading only
 
 
-    if(MPI_File_open(mpi_comm_, filename_, access_mode, MPI_INFO_NULL, &fileHandle) != MPI_SUCCESS)
+    if(MPI_File_open(mpi_comm_, filename_.c_str(), access_mode, MPI_INFO_NULL, &fileHandle) != MPI_SUCCESS)
     {
         std::cout << "Can't open input matrix - " << filename_ << " on rank " << world_rank_ << std::endl;
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -210,7 +210,7 @@ void cqr::qr2bgsloohahead::Start()
     validate = std::make_unique<Validate>(localm_, n_,
                                           cudaAlocal_.data(), 
                                           cudaR_.data(),
-                                          filename_,
+                                          filename_.c_str(),
                                           cublashandle_);
 /*
         cudaR_.copytohost(R_);
