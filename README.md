@@ -1,4 +1,4 @@
-![GitHub License](https://img.shields.io/github/license/HybridScale/CholeskyQR2-IM)
+![GitHub License](https://img.shields.io/github/license/HybridScale/CholeskyQR2-IM) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10888693.svg)](https://doi.org/10.5281/zenodo.10888693)
 
 # CholeskyQR2 for ill-conditioned matrices
 
@@ -6,7 +6,7 @@ The **CholeskyQR2** for **I**ll-conditioned **M**atrices (**CholeskyQR2-IM**) li
 
 The **CholeskyQR2-IM** introduces an alternative approach that combines traditional CholeskyQR2 with the **shifting** technique and the **modified Gram-Schmidt** process. The innovative approach enhances both the **numerical stability** of the algorithm and the **accuracy** of the computed factor Q.
 
-The library is specifically designed for QR factorisation of large tall-and-skinny matrices on distributed memory systems, with full support for both GPUs and modern CPUs. Comprehensive insights into the novel QR algorithm as well as detailed analyses of its stability and performance can be found [here](link-to-arxiv).
+The library is specifically designed for QR factorisation of large tall-and-skinny matrices on distributed memory systems, with full support for both GPUs and modern CPUs. Comprehensive insights into the novel QR algorithm as well as detailed analyses of its stability and performance can be found [here](https://arxiv.org/abs/2405.04237).
 
 ## Algorithmic variants
 
@@ -115,7 +115,7 @@ The code was developed at the [Ruđer Bošković Institute (RBI)](https://www.ir
 
 To cite the CholeskyQR2-IM please use the following paper:
 
-- link-to-archive (to be added)
+- N. Mijić, A. Kaushik Badrinarayanan, D. Davidović. QR factorization of ill-conditioned tall-and-skinny matrices on distributed-memory systems, Arxiv, 2024, 2405.04237 ([here](https://arxiv.org/abs/2405.04237))
 
 ## Copyright and License
 
